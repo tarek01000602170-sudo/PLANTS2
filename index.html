@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الحصاد الذكي - النسخة المطورة</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/188/188333.png">
+
+    <!-- المكاتب الخارجية -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- مكتبة الإكسيل -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --glass: rgba(255, 255, 255, 0.12);
+            --border: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a1a, #2d5a27, #132613);
+            background-attachment: fixed;
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .input-glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: white !important;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #main-slider {
+            height: 280px;
+            border-radius: 20px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        #main-slider img {
+            height: 280px;
+            width: 100%;
+            object-fit: contain;
+        }
+
+        .zoom-container {
+            overflow: hidden;
+            border-radius: 15px;
+            cursor: zoom-in;
+        }
+
+        .zoom-container img {
+            transition: transform 0.5s ease;
+            width: 100%;
+        }
+
+        .zoom-container:hover img {
+            transform: scale(1.5);
+        }
+
+        .product-card {
+            cursor: pointer;
+            transition: 0.3s;
+            height: 100%;
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .product-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 15px;
+            background: #222;
+        }
+
+        .out-of-stock-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff4757;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            z-index: 5;
+        }
+
+        #wa-support-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 60px;
+            height: 60px;
+            z-index: 1000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-link.active {
+            background-color: #2d5a27 !important;
+            border: none;
+        }
+
+        .nav-link {
+            color: white !important;
+        }
+
+        @media (max-width: 768px) {
+            #main-slider {
+                height: 200px;
+            }
+
+            #main-slider img {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <a href="#" id="wa-support-btn" target="_blank" class="btn btn-success shadow-lg"><i
+            class="fab fa-whatsapp fa-2x"></i></a>
+
+    <nav class="navbar navbar-dark bg-dark bg-opacity-50 sticky-top">
+        <div class="container">
+            <span class="navbar-brand fw-bold" onclick="showPage('home-page')" style="cursor:pointer">🌿 الحصاد
+                الذكي</span>
+            <div class="d-flex gap-1">
+                <button class="btn btn-outline-light btn-sm" onclick="showPage('seller-login')">البائعين</button>
+                <button class="btn btn-outline-info btn-sm" onclick="showPage('packaging-page')">التغليف</button>
+                <button class="btn btn-warning btn-sm" onclick="promptAdmin()">المدير</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-3">
+
+        <!-- 1. شاشة اختيار البائع -->
+        <section id="seller-login" class="page-section text-center">
+            <div class="glass-card col-md-5 mx-auto py-5">
+                <i class="fas fa-user-circle fa-4x mb-3 text-success"></i>
+                <h3>دخول البائع</h3>
+                <select id="seller-select-box" class="form-select input-glass my-4"></select>
+                <button onclick="enterSellerMode()" class="btn btn-success w-100 fw-bold">دخول النظام</button>
+            </div>
+        </section>
+
+        <!-- 2. الصفحة الرئيسية -->
+        <section id="home-page" class="page-section hidden">
+            <div id="main-slider" class="carousel slide mb-4" data-bs-ride="carousel">
+                <div class="carousel-inner" id="slider-content">
+                    <div class="carousel-item active"><img src="https://via.placeholder.com/1200x400?text=جاري_التحميل"
+                            class="d-block w-100"></div>
+                </div>
+            </div>
+            <div class="glass-card mb-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-secondary text-white"><i
+                            class="fas fa-search"></i></span>
+                    <input type="text" id="home-search" class="form-control input-glass"
+                        placeholder="ابحث عن منتج بالاسم..." oninput="filterHome()">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="glass-card">
+                        <h5>التصنيفات</h5>
+                        <div id="cats-menu"></div>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="row" id="products-grid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. تفاصيل المنتج -->
+        <section id="details-page" class="page-section hidden">
+            <div class="glass-card">
+                <button class="btn btn-sm btn-light mb-3" onclick="showPage('home-page')">← رجوع</button>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="zoom-container"><img id="main-detail-img" src=""></div>
+                        <div id="img-thumbs" class="d-flex mt-2 overflow-auto"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <h2 id="det-title"></h2>
+                        <h4 class="text-info">الوزن: <span id="det-weight"></span></h4>
+                        <h3 class="text-warning fw-bold" id="det-price"></h3>
+                        <p class="badge bg-success" id="det-status">متوفر</p>
+                        <p class="mt-2">المخزون: <span id="det-stock"></span></p>
+                        <p id="det-desc" class="mt-3"></p>
+                        <div id="order-btn-container">
+                            <button class="btn btn-primary w-100 mt-3" onclick="showPage('seller-order')">طلب هذا
+                                المنتج</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. لوحة الإدارة -->
+        <section id="admin-page" class="page-section hidden">
+            <div class="glass-card">
+                <h3 class="mb-4 text-center border-bottom pb-2">لوحة تحكم المدير</h3>
+
+                <!-- أزرار التنقل (Tabs) -->
+                <ul class="nav nav-pills nav-justified mb-4 gap-2" id="adminTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="p-tab-btn" data-bs-toggle="pill"
+                            data-bs-target="#p-tab" type="button" role="tab">المنتجات</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="c-tab-btn" data-bs-toggle="pill" data-bs-target="#c-tab"
+                            type="button" role="tab">الفئات</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="sel-tab-btn" data-bs-toggle="pill"
+                            data-bs-target="#sel-tab" type="button" role="tab" onclick="loadSellers()">البائعين</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="s-tab-btn" data-bs-toggle="pill" data-bs-target="#s-tab"
+                            type="button" role="tab">الإعدادات</button>
+                    </li>
+                </ul>
+                <div class="mb-2">
+                    <input type="text" id="admin-search" class="form-control input-glass"
+                        placeholder="بحث في المنتجات للإدارة..." oninput="filterAdminTable()">
+                </div>
+
+                <!-- محتوى التبويبات (Tab Content) -->
+                <div class="tab-content" id="adminTabsContent">
+
+                    <!-- تبويب المنتجات -->
+                    <div class="tab-pane fade show active" id="p-tab" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-4 glass-card text-white">
+                                <h5 id="form-title">إضافة / تعديل منتج</h5>
+                                <input type="text" id="p-name" placeholder="اسم المنتج"
+                                    class="form-control input-glass mb-2">
+                                <input type="number" id="p-price" placeholder="السعر"
+                                    class="form-control input-glass mb-2">
+                                <input type="text" id="p-weight" placeholder="الوزن"
+                                    class="form-control input-glass mb-2">
+                                <input type="number" id="p-stock" placeholder="المخزون"
+                                    class="form-control input-glass mb-2">
+                                <select id="p-available" class="form-select input-glass mb-2">
+                                    <option value="true">متوفر</option>
+                                    <option value="false">غير متوفر</option>
+                                </select>
+                                <div id="img-inputs"><input type="text" placeholder="رابط صورة"
+                                        class="form-control input-glass mb-2 p-img"></div>
+                                <button onclick="addImgField()" class="btn btn-sm btn-secondary mb-3">+ صورة
+                                    إضافية</button>
+
+                                <hr class="border-secondary">
+                                <h6>إضافة عبر Excel</h6>
+                                <button onclick="downloadExcelTemplate()"
+                                    class="btn btn-outline-info btn-sm w-100 mb-2">تحميل القالب</button>
+                                <label class="btn btn-info btn-sm w-100 mb-3">رفع ملف <input type="file" hidden
+                                        onchange="importFromExcel(event)" accept=".xlsx, .xls"></label>
+
+                                <select id="p-main-cat" class="form-select input-glass mb-2"></select>
+                                <textarea id="p-desc" class="form-control input-glass mb-2"
+                                    placeholder="الوصف"></textarea>
+                                <button id="save-btn" onclick="saveProduct()" class="btn btn-success w-100">حفظ
+                                    المنتج</button>
+                            </div>
+                            <div class="col-md-8">
+                                <input type="text" id="admin-search" class="form-control input-glass mb-2"
+                                    placeholder="بحث في المنتجات..." oninput="filterAdminTable()">
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>المنتج</th>
+                                                <th>الوزن</th>
+                                                <th>السعر</th>
+                                                <th>العمليات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="admin-p-table"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- تبويب الفئات -->
+                    <div class="tab-pane fade" id="c-tab" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6 glass-card">
+                                <h5>إدارة الفئات الرئيسية</h5>
+                                <div class="d-flex gap-2 mb-3">
+                                    <input type="text" id="new-m-cat" class="form-control input-glass"
+                                        placeholder="اسم الفئة">
+                                    <button onclick="addMCat()" class="btn btn-primary">إضافة</button>
+                                </div>
+                                <div id="m-cats-list-admin"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- تبويب البائعين -->
+                    <div class="tab-pane fade" id="sel-tab" role="tabpanel">
+                        <div class="glass-card">
+                            <h5>إدارة البائعين</h5>
+                            <div class="d-flex gap-2 mb-3">
+                                <input type="text" id="new-seller-input" class="form-control input-glass"
+                                    placeholder="اسم البائع الجديد">
+                                <button onclick="addSeller()" class="btn btn-primary">إضافة بائع</button>
+                            </div>
+                            <ul id="admin-sellers-list" class="list-group list-group-flush"></ul>
+                        </div>
+                    </div>
+                    <!-- تبويب الإعدادات -->
+                    <div class="tab-pane fade" id="s-tab" role="tabpanel">
+                        <div class="glass-card">
+                            <h5>إعدادات واتساب</h5>
+                            <label class="small">رقم استلام الفواتير:</label>
+                            <input type="text" id="wa-bill" class="form-control input-glass mb-2">
+                            <label class="small">رقم الدعم الفني:</label>
+                            <input type="text" id="wa-supp" class="form-control input-glass mb-4">
+                            <button onclick="saveSettings()" class="btn btn-primary w-100">حفظ الإعدادات</button>
+                            <hr>
+                            <h5>السلايدر الرئيسي</h5>
+                            <div id="sl-inputs"><input type="text" class="form-control input-glass mb-2 sl-url"
+                                    placeholder="رابط صورة"></div>
+                            <button onclick="addSlField()" class="btn btn-sm btn-secondary mb-2">+ صورة</button>
+                            <button onclick="saveSlider()" class="btn btn-success w-100">نشر السلايدر</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. طلب البائع -->
+        <section id="seller-order" class="page-section hidden">
+            <div class="glass-card">
+                <h4>أوردر جديد | البائع: <span id="active-s-name" class="text-warning"></span></h4>
+                <div class="mb-3">
+                    <input type="text" id="seller-search" class="form-control input-glass"
+                        placeholder="🔍 ابحث هنا لإضافة المنتج للفاتورة سريعاً..." oninput="filterSellerProds()">
+                </div>
+                <div id="seller-prods" class="row"></div>
+                <button class="btn btn-primary w-100 mt-3 p-3" onclick="showCustForm()">حساب الفاتورة</button>
+            </div>
+        </section>
+
+        <!-- 6. العميل -->
+        <section id="customer-form" class="page-section hidden">
+            <div class="glass-card">
+                <h3>مراجعة الفاتورة وبيانات الشحن</h3>
+                <input type="text" id="c-name" placeholder="اسم العميل" class="form-control input-glass mb-2">
+                <input type="text" id="c-phone1" placeholder="رقم الهاتف" class="form-control input-glass mb-2">
+                <select id="c-gov" class="form-select input-glass mb-2" onchange="reCalc()"></select>
+                <input type="text" id="c-addr" placeholder="العنوان بالتفصيل (المنطقة - الشارع - علامة مميزة)"
+                    class="form-control input-glass mb-2">
+
+                <div class="p-3 bg-dark bg-opacity-50 rounded mt-3">
+                    <h5 class="border-bottom border-secondary pb-2 mb-3">الحسابات:</h5>
+                    <div class="d-flex justify-content-between mb-2"><span>إجمالي المنتجات:</span> <span><span
+                                id="f-sub">0</span> ج.م</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span>مصاريف الشحن:</span> <span><span
+                                id="f-ship">50</span> ج.م</span></div>
+                    <div class="d-flex justify-content-between h5 text-warning fw-bold"><span>الإجمالي النهائي:</span>
+                        <span><span id="f-total">0</span> ج.م</span>
+                    </div>
+
+                    <!-- الخانات الجديدة -->
+                    <div class="mt-3">
+                        <label class="small text-info">المبلغ الذي تم تحويله (عربون):</label>
+                        <input type="number" id="c-paid" class="form-control input-glass mb-2" value="0"
+                            oninput="reCalc()">
+                        <div class="d-flex justify-content-between h5 text-white fw-bold">
+                            <span>المتبقي عند الاستلام:</span>
+                            <span><span id="f-rem">0</span> ج.م</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="submitOrder()" class="btn btn-success w-100 mt-3 p-3 fw-bold">إرسال الفاتورة عبر واتساب
+                    <i class="fab fa-whatsapp"></i></button>
+                <button onclick="showPage('seller-order')" class="btn btn-link text-white btn-sm w-100 mt-2">رجوع لتعديل
+                    الطلب</button>
+            </div>
+            <div class="d-flex flex-column gap-2 mt-4">
+                <!-- الزر الأول: للمسؤول + حفظ البيانات -->
+                <button onclick="sendToAdmin()" class="btn btn-primary btn-lg p-3 fw-bold shadow">
+                    <i class="fas fa-user-shield me-2"></i> إرسال للمسؤول (حفظ الطلب)
+                </button>
+
+                <!-- الزر الثاني: للعميل مباشرة -->
+                <button onclick="sendToCustomer()" class="btn btn-success btn-lg p-3 fw-bold shadow">
+                    <i class="fab fa-whatsapp me-2"></i> إرسال نسخة للعميل
+                </button>
+
+                <!-- زر لإنهاء الطلب والعودة للبداية -->
+                <button onclick="location.reload()" class="btn btn-outline-danger btn-sm mt-2">
+                    إنهاء الطلب وفتح أوردر جديد
+                </button>
+            </div>
+        </section>
+
+        <!-- 7. شاشة التغليف (Packaging Page) -->
+        <section id="packaging-page" class="page-section hidden">
+            <div class="glass-card">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+                    <h3><i class="fas fa-box-open text-info me-2"></i> شاشة التغليف والشحن</h3>
+                    <span class="badge bg-info p-2" id="pending-count">عدد الطلبات: 0</span>
+                </div>
+
+                <!-- هنا تظهر الطلبات -->
+                <div id="p-orders-container" class="row">
+                    <div class="text-center p-5">
+                        <div class="spinner-border text-info" role="status"></div>
+                        <p class="mt-2">جاري تحميل الطلبات الجديدة...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Firebase & Script -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvvVN8lHyBtnqNA47hl7cWUEGaXA-AvVA",
+            authDomain: "plants-a4dec.firebaseapp.com",
+            projectId: "plants-a4dec",
+            storageBucket: "plants-a4dec.firebasestorage.app",
+            messagingSenderId: "75534607682",
+            appId: "1:75534607682:web:32abc0c4294397efecd4db",
+            measurementId: "G-PMT2M5LXHM"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let allProducts = [], categories = {}, editingId = null, waBill = "";
+        const govs = ["القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "الغربية", "الشرقية", "المنوفية", "البحيرة", "دمياط", "كفر الشيخ", "القليوبية", "بورسعيد", "الإسماعيلية", "السويس", "الفيوم", "بني سويف", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", "مطروح", "شمال سيناء", "جنوب سيناء", "الوادي الجديد", "البحر الأحمر"];
+
+        function showPage(id) {
+            // إخفاء كل الأقسام الرئيسية
+            document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
+
+            // إظهار القسم المطلوب فقط
+            const targetPage = document.getElementById(id);
+            if (targetPage) {
+                targetPage.classList.remove('hidden');
+            }
+
+            // إذا دخلنا صفحة الإدارة، نتأكد من تفعيل أول تبويب تلقائياً
+            if (id === 'admin-page') {
+                const firstTab = document.querySelector('#adminTabs .nav-link:first-child');
+                if (firstTab) {
+                    bootstrap.Tab.getOrCreateInstance(firstTab).show();
+                }
+            }
+            window.scrollTo(0, 0);
+        }
+        function promptAdmin() { if (prompt("User") === 'admin' && prompt("Pass") === 'gold123') showPage('admin-page'); }
+        function editP(id) {
+            // 1. البحث عن المنتج في المصفوفة
+            const p = allProducts.find(x => x.id === id);
+            if (!p) return;
+
+            // 2. تعيين المعرف للمتغير العالمي
+            editingId = id;
+
+            // 3. ملء الحقول الأساسية
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-price').value = p.price;
+            document.getElementById('p-weight').value = p.weight || '';
+            document.getElementById('p-stock').value = p.stock || 0;
+            document.getElementById('p-available').value = p.available === false ? "false" : "true";
+            document.getElementById('p-desc').value = p.desc || '';
+
+            // 4. التعامل مع الصور المتعددة (إعادة بناء الحقول)
+            const imgContainer = document.getElementById('img-inputs');
+            imgContainer.innerHTML = ''; // تفريغ الحقول القديمة
+
+            if (p.images && p.images.length > 0) {
+                p.images.forEach(imgUrl => {
+                    const input = document.createElement('input');
+                    input.type = "text";
+                    input.value = imgUrl;
+                    input.placeholder = "رابط صورة";
+                    input.className = "form-control input-glass mb-2 p-img";
+                    imgContainer.appendChild(input);
+                });
+            } else {
+                // إذا لم يكن هناك صور، نضع حقل واحد فارغ
+                addImgField();
+            }
+
+            // 5. تغيير شكل الزرار والعنوان للتنبيه أننا في وضع التعديل
+            document.getElementById('save-btn').innerText = "تحديث بيانات المنتج الحالي";
+            document.getElementById('save-btn').classList.replace('btn-success', 'btn-warning');
+            document.getElementById('form-title').innerText = "تعديل منتج: " + p.name;
+
+            // 6. الصعود للأعلى لبدء التعديل
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        // Excel Logic Updated
+        function downloadExcelTemplate() {
+            const data = [["اسم المنتج", "السعر", "الوزن", "المخزون", "الوصف", "متوفر (نعم/لا)"]];
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "المنتجات");
+            XLSX.writeFile(wb, "Template_Products.xlsx");
+        }
+
+        async function importFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                for (let row of jsonData) {
+                    if (row["اسم المنتج"]) {
+                        await db.collection('products').add({
+                            name: row["اسم المنتج"].toString(),
+                            price: Number(row["السعر"]) || 0,
+                            weight: row["الوزن"] ? row["الوزن"].toString() : "غير محدد",
+                            stock: Number(row["المخزون"]) || 0,
+                            available: row["متوفر (نعم/لا)"] === "نعم",
+                            desc: row["الوصف"] ? row["الوصف"].toString() : "",
+                            images: [], mainCat: "عام"
+                        });
+                    }
+                }
+                alert("تم الاستيراد!"); loadData();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Load Data
+        async function loadData() {
+            const cSnap = await db.collection('cats').get();
+            document.getElementById('p-main-cat').innerHTML = '';
+            document.getElementById('m-cats-list-admin').innerHTML = '';
+            cSnap.forEach(doc => {
+                categories[doc.id] = doc.data().subs || [];
+                document.getElementById('p-main-cat').innerHTML += `<option>${doc.id}</option>`;
+                document.getElementById('m-cats-list-admin').innerHTML += `<div class="d-flex justify-content-between mb-2"><span>${doc.id}</span> <button class="btn btn-danger btn-sm" onclick="delMCat('${doc.id}')">حذف</button></div>`;
+            });
+
+            const sSnap = await db.collection('settings').doc('general').get();
+            if (sSnap.exists) {
+                waBill = sSnap.data().bill;
+                document.getElementById('wa-bill').value = waBill;
+                document.getElementById('wa-supp').value = sSnap.data().supp;
+                document.getElementById('wa-support-btn').href = `https://wa.me/${sSnap.data().supp}`;
+            }
+
+            const pSnap = await db.collection('products').get();
+            allProducts = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            renderHome(); renderAdminTable(); renderSellerProds(); loadSellers();
+            document.getElementById('c-gov').innerHTML = govs.map(g => `<option>${g}</option>`).join('');
+        }
+
+        function renderHome() {
+            document.getElementById('products-grid').innerHTML = allProducts.map(p => `
+            <div class="col-md-4 mb-4">
+                <div class="glass-card product-card text-center" onclick="showDetails('${p.id}')">
+                    ${!p.available ? '<div class="out-of-stock-badge">غير متوفر</div>' : ''}
+                    <img src="${p.images[0] || 'https://via.placeholder.com/150?text=No+Image'}" class="product-img mb-2" style="${!p.available ? 'filter: grayscale(1);' : ''}">
+                    <h6>${p.name}</h6>
+                    <small class="text-info d-block mb-1">${p.weight || ''}</small>
+                    <p class="text-warning fw-bold">${p.price} ج.م</p>
+                </div>
+            </div>
+        `).join('');
+        }
+        // 1. بحث الصفحة الرئيسية
+        function filterHome() {
+            const term = document.getElementById('home-search').value.toLowerCase();
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term));
+
+            document.getElementById('products-grid').innerHTML = filtered.map(p => `
+        <div class="col-md-4 mb-4">
+            <div class="glass-card product-card text-center" onclick="showDetails('${p.id}')">
+                ${!p.available ? '<div class="out-of-stock-badge">غير متوفر</div>' : ''}
+                <img src="${p.images[0] || 'https://via.placeholder.com/150?text=No+Image'}" class="product-img mb-2" style="${!p.available ? 'filter: grayscale(1);' : ''}">
+                <h6>${p.name}</h6>
+                <small class="text-info d-block mb-1">${p.weight || ''}</small>
+                <p class="text-warning fw-bold">${p.price} ج.م</p>
+            </div>
+        </div>
+    `).join('');
+        }
+
+        // 2. بحث صفحة البائع (إضافة للفاتورة)
+        // ملاحظة: قمنا بتعديل هذه الدالة لتخفي العناصر بدلاً من إعادة مسحها 
+        // لكي لا تضيع الكميات التي أدخلها البائع في المنتجات الأخرى أثناء البحث
+        function filterSellerProds() {
+            const term = document.getElementById('seller-search').value.toLowerCase();
+            const cards = document.querySelectorAll('#seller-prods .seller-prod-item');
+
+            cards.forEach(card => {
+                const name = card.getAttribute('data-name').toLowerCase();
+                if (name.includes(term)) {
+                    card.style.display = "block";
+                } else {
+                    card.style.display = "none";
+                }
+            });
+        }
+
+        // 3. بحث جدول الإدارة
+        function filterAdminTable() {
+            const term = document.getElementById('admin-search').value.toLowerCase();
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term));
+
+            document.getElementById('admin-p-table').innerHTML = filtered.map(p => `
+        <tr>
+            <td>${p.name}</td>
+            <td>${p.weight || '-'}</td>
+            <td>${p.price}</td>
+            <td>
+                <button class="btn btn-sm btn-warning" onclick="editP('${p.id}')">تعديل</button>
+                <button class="btn btn-sm btn-danger" onclick="delP('${p.id}')">حذف</button>
+            </td>
+        </tr>
+    `).join('');
+        }
+
+        function showDetails(id) {
+            const p = allProducts.find(x => x.id === id);
+            document.getElementById('det-title').innerText = p.name;
+            document.getElementById('det-weight').innerText = p.weight || 'غير محدد';
+            document.getElementById('det-price').innerText = p.price + " ج.م";
+            document.getElementById('det-stock').innerText = p.stock;
+            document.getElementById('det-desc').innerText = p.desc;
+            document.getElementById('main-detail-img').src = p.images[0] || 'https://via.placeholder.com/400?text=No+Image';
+
+            const statusEl = document.getElementById('det-status');
+            const btnCont = document.getElementById('order-btn-container');
+            if (p.available) {
+                statusEl.innerText = "متوفر";
+                statusEl.className = "badge bg-success";
+                btnCont.innerHTML = `<button class="btn btn-primary w-100 mt-3" onclick="showPage('seller-order')">طلب هذا المنتج</button>`;
+            } else {
+                statusEl.innerText = "غير متوفر حالياً";
+                statusEl.className = "badge bg-danger";
+                btnCont.innerHTML = `<button class="btn btn-secondary w-100 mt-3" disabled>غير متوفر للطلب</button>`;
+            }
+
+            document.getElementById('img-thumbs').innerHTML = (p.images || []).map(img => `<img src="${img}" style="width:50px; height:50px; margin:2px" onclick="document.getElementById('main-detail-img').src='${img}'">`).join('');
+            showPage('details-page');
+        }
+
+        async function saveProduct() {
+            const name = document.getElementById('p-name').value;
+            const price = document.getElementById('p-price').value;
+
+            if (!name || !price) {
+                alert("⚠️ يرجى إدخال اسم المنتج وسعره على الأقل");
+                return;
+            }
+
+            // تجهيز البيانات
+            const productData = {
+                name: name,
+                price: Number(price),
+                weight: document.getElementById('p-weight').value,
+                stock: Number(document.getElementById('p-stock').value),
+                available: document.getElementById('p-available').value === "true",
+                desc: document.getElementById('p-desc').value,
+                mainCat: document.getElementById('p-main-cat').value,
+                // تجميع كل روابط الصور من الحقول المتعددة
+                images: Array.from(document.querySelectorAll('.p-img')).map(i => i.value).filter(v => v !== "")
+            };
+
+            try {
+                if (editingId) {
+                    // حالة التعديل
+                    await db.collection('products').doc(editingId).update(productData);
+                    alert("✅ تم تحديث المنتج بنجاح");
+                } else {
+                    // حالة إضافة منتج جديد
+                    await db.collection('products').add(productData);
+                    alert("✅ تم إضافة المنتج الجديد بنجاح");
+                }
+
+                // إعادة ضبط الفورم بعد النجاح
+                resetPForm();
+                loadData(); // تحديث الجدول والبيانات
+            } catch (error) {
+                console.error("Error saving product: ", error);
+                alert("❌ حدث خطأ أثناء الحفظ");
+            }
+        }
+        // دالة لتصفير الفورم والعودة لحالة الإضافة
+        function resetPForm() {
+            editingId = null;
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-price').value = '';
+            document.getElementById('p-weight').value = '';
+            document.getElementById('p-stock').value = '';
+            document.getElementById('p-available').value = "true";
+            document.getElementById('p-desc').value = '';
+            document.getElementById('img-inputs').innerHTML = '<input type="text" placeholder="رابط صورة" class="form-control input-glass mb-2 p-img">';
+
+            document.getElementById('save-btn').innerText = "حفظ المنتج";
+            document.getElementById('save-btn').classList.replace('btn-warning', 'btn-success');
+            document.getElementById('form-title').innerText = "إضافة منتج جديد";
+        }
+        async function delP(id) {
+            // 1. إظهار رسالة تأكيد للمستخدم قبل الحذف
+            if (confirm("⚠️ هل أنت متأكد من حذف هذا المنتج نهائياً؟ لا يمكن التراجع عن هذه الخطوة.")) {
+                try {
+                    // 2. محاولة الحذف من قاعدة البيانات باستخدام المعرف (id)
+                    await db.collection('products').doc(id).delete();
+
+                    // 3. تنبيه بالنجاح
+                    alert("✅ تم حذف المنتج بنجاح من النظام.");
+
+                    // 4. تحديث البيانات في الصفحة فوراً لإخفاء المنتج المحذوف
+                    loadData();
+
+                } catch (error) {
+                    console.error("Error deleting product: ", error);
+                    alert("❌ حدث خطأ أثناء محاولة الحذف، يرجى المحاولة مرة أخرى.");
+                }
+            }
+        }
+
+        function renderAdminTable() {
+            const tableBody = document.getElementById('admin-p-table');
+            if (!tableBody) return;
+
+            tableBody.innerHTML = allProducts.map(p => {
+                const isLow = p.stock <= 5;
+
+                return `
+            <tr class="${isLow ? 'table-danger text-dark fw-bold' : ''}">
+                <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</td>
+                <td>${p.weight || '-'}</td>
+                <td class="${isLow ? 'text-danger fw-bold' : ''}">${p.stock || 0}</td>
+                <td>${p.price} ج.م</td>
+                <td class="text-center">
+                    <div class="d-flex gap-1 justify-content-center">
+                        <!-- زر التعديل -->
+                        <button class="btn btn-sm btn-warning" onclick="editP('${p.id}')" title="تعديل">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <!-- زر الحذف المصلح -->
+                        <button class="btn btn-sm btn-danger" onclick="delP('${p.id}')" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+            }).join('');
+
+            // تحديث تنبيهات المخزون المنخفض (الدالة التي أضفناها سابقاً)
+            checkLowStock();
+        }
+        // دالة مراقبة الطلبات لحظياً لشاشة التغليف
+        function startPackagingListener() {
+            // مراقبة الطلبات وترتيبها من الأحدث للأقدم
+            db.collection('orders').orderBy('timestamp', 'desc').onSnapshot((snapshot) => {
+                const container = document.getElementById('p-orders-container');
+                const countBadge = document.getElementById('pending-count');
+
+                let html = "";
+                let pendingCount = 0;
+
+                if (snapshot.empty) {
+                    container.innerHTML = `<div class="text-center p-5 w-100"><h5>لا توجد طلبات حالياً</h5></div>`;
+                    countBadge.innerText = "عدد الطلبات: 0";
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const order = doc.data();
+                    const orderId = doc.id;
+
+                    // نعد الطلبات التي لم تُشحن بعد
+                    if (order.status === 'pending') pendingCount++;
+
+                    // تحديد شكل الكارت بناءً على الحالة
+                    const isSent = order.status === 'sent';
+                    const cardClass = isSent ? 'opacity-75 border-success' : 'border-info';
+
+                    html += `
+                <div class="col-md-6 mb-4">
+                    <div class="glass-card h-100 border ${cardClass}" style="position:relative">
+                        ${isSent ? '<div class="badge bg-success" style="position:absolute; top:10px; left:10px;">تم الإرسال ✓</div>' : ''}
+                        
+                        <div class="mb-2">
+                            <h5 class="text-warning mb-1">${order.customer}</h5>
+                            <div class="small"><i class="fas fa-phone-alt me-1"></i> ${order.phone}</div>
+                            <div class="small"><i class="fas fa-map-marker-alt me-1"></i> ${order.city} - ${order.addr}</div>
+                        </div>
+                        
+                        <hr class="border-secondary my-2">
+                        
+                        <h6>المنتجات المطلوب تغليفها:</h6>
+                        <ul class="list-unstyled">
+                            ${order.items.map((item, index) => `
+                                <li class="d-flex align-items-center mb-1">
+                                    <input type="checkbox" id="chk-${orderId}-${index}" class="form-check-input me-2" ${isSent ? 'checked disabled' : ''}>
+                                    <label for="chk-${orderId}-${index}" class="mb-0 ${isSent ? 'text-decoration-line-through' : ''}">
+                                        <span class="fw-bold text-info">${item.qty}</span> × ${item.name}
+                                    </label>
+                                </li>
+                            `).join('')}
+                        </ul>
+
+                        ${order.globalNote ? `<div class="small bg-dark bg-opacity-50 p-2 rounded mb-3 text-info">📝 ${order.globalNote}</div>` : ''}
+
+                        <div class="mt-auto pt-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small">بواسطة: <strong>${order.seller || 'غير معروف'}</strong></span>
+                                ${!isSent ?
+                            `<button onclick="markAsShipped('${orderId}')" class="btn btn-success btn-sm fw-bold shadow">
+                                        <i class="fas fa-shipping-fast me-1"></i> تم الإرسال (قفل التعديل)
+                                     </button>` :
+                            `<button class="btn btn-outline-light btn-sm disabled">تم إنهاء الطلب</button>`
+                        }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+                });
+
+                container.innerHTML = html;
+                countBadge.innerText = `عدد الطلبات: ${pendingCount}`;
+            }, (error) => {
+                console.error("Error in Packaging Listener: ", error);
+                document.getElementById('p-orders-container').innerHTML = `<div class="alert alert-danger">خطأ في الاتصال بقاعدة البيانات</div>`;
+            });
+        }
+
+        // دالة تحويل حالة الطلب لـ "تم الإرسال"
+        async function markAsShipped(orderId) {
+            if (confirm("هل تأكدت من تغليف جميع المنتجات؟ بمجرد الضغط على 'تم الإرسال' لن يتمكن البائع من تعديل البيانات.")) {
+                try {
+                    await db.collection('orders').doc(orderId).update({
+                        status: 'sent',
+                        shippedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    alert("تم تحديث حالة الطلب وإغلاقه بنجاح.");
+                } catch (error) {
+                    console.error("Error updating order: ", error);
+                    alert("حدث خطأ أثناء التحديث");
+                }
+            }
+        }
+
+        // تشغيل المستمع بمجرد تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', () => {
+            startPackagingListener();
+        });
+
+        // Helper functions (addImgField, addSeller, etc... keep as previous versions)
+        function addImgField() { let i = document.createElement('input'); i.className = "form-control input-glass mb-2 p-img"; document.getElementById('img-inputs').appendChild(i); }
+        async function addMCat() { await db.collection('cats').doc(document.getElementById('new-m-cat').value).set({ subs: [] }); loadData(); }
+        async function delMCat(id) { await db.collection('cats').doc(id).delete(); loadData(); }
+        async function loadSellers() {
+            const snap = await db.collection('sellers').get();
+            document.getElementById('admin-sellers-list').innerHTML = '';
+            document.getElementById('seller-select-box').innerHTML = '';
+            snap.forEach(doc => {
+                const s = doc.data();
+                document.getElementById('admin-sellers-list').innerHTML += `<li class="list-group-item bg-transparent text-white d-flex justify-content-between">${s.name} <button class="btn btn-danger btn-sm" onclick="delSeller('${doc.id}')">حذف</button></li>`;
+                document.getElementById('seller-select-box').innerHTML += `<option value="${s.name}">${s.name}</option>`;
+            });
+        }
+        async function addSeller() { await db.collection('sellers').add({ name: document.getElementById('new-seller-input').value }); loadSellers(); }
+        async function delSeller(id) { await db.collection('sellers').doc(id).delete(); loadSellers(); }
+        async function saveSettings() { await db.collection('settings').doc('general').set({ bill: document.getElementById('wa-bill').value, supp: document.getElementById('wa-supp').value }); alert("تم"); loadData(); }
+        function enterSellerMode() { document.getElementById('active-s-name').innerText = document.getElementById('seller-select-box').value; showPage('home-page'); }
+
+        function renderSellerProds() {
+            document.getElementById('seller-prods').innerHTML = allProducts.filter(p => p.available).map(p => `
+        <div class="col-md-6 mb-2 seller-prod-item" data-name="${p.name}">
+            <div class="glass-card p-2">
+                <label class="fw-bold">${p.name} (${p.price} ج.م)</label>
+                <input type="number" class="form-control input-glass s-qty" data-id="${p.id}" onchange="reCalc()" placeholder="الكمية">
+            </div>
+        </div>
+    `).join('');
+        }
+        function reCalc() {
+            let sub = 0;
+            document.querySelectorAll('.s-qty').forEach(i => {
+                if (i.value > 0) {
+                    const prod = allProducts.find(p => p.id === i.dataset.id);
+                    if (prod) sub += (prod.price * i.value);
+                }
+            });
+
+            const shipping = 50; // يمكنك تغييرها لتكون متغيرة حسب المحافظة لاحقاً
+            const total = sub + shipping;
+            const paid = Number(document.getElementById('c-paid').value) || 0;
+            const remaining = total - paid;
+
+            document.getElementById('f-sub').innerText = sub;
+            document.getElementById('f-ship').innerText = shipping;
+            document.getElementById('f-total').innerText = total;
+            document.getElementById('f-rem').innerText = remaining;
+        }
+        function showCustForm() { reCalc(); showPage('customer-form'); }
+        // دالة مساعدة لبناء نص الفاتورة الموحد
+        function buildInvoiceMessage() {
+            const seller = document.getElementById('active-s-name').innerText;
+            const name = document.getElementById('c-name').value;
+            const phone = document.getElementById('c-phone1').value;
+            const gov = document.getElementById('c-gov').value;
+            const addr = document.getElementById('c-addr').value;
+            const paid = Number(document.getElementById('c-paid').value) || 0;
+
+            let itemsText = "";
+            document.querySelectorAll('.s-qty').forEach(i => {
+                if (i.value > 0) {
+                    const p = allProducts.find(x => x.id === i.dataset.id);
+                    const lineTotal = p.price * i.value;
+                    itemsText += `${i.value} | ${p.name} | ${lineTotal} ج.م\n`;
+                }
+            });
+
+            const subtotal = document.getElementById('f-sub').innerText;
+            const shipping = document.getElementById('f-ship').innerText;
+            const total = document.getElementById('f-total').innerText;
+            const remaining = document.getElementById('f-rem').innerText;
+
+            let msg = `👤 العميل: ${name}\n`;
+            msg += `📱 الهاتف: ${phone}\n`;
+            msg += `📍 المحافظة: ${gov}\n`;
+            msg += `🏠 العنوان: ${gov} - ${addr}\n\n`;
+            msg += `🛒 تفاصيل المنتجات:\n${itemsText}\n`;
+            msg += `*إجمالي المنتجات:* ${subtotal} ج.م\n`;
+            msg += `مصاريف الشحن: ${shipping} ج.م\n`;
+            msg += `💰 الإجمالي النهائي: ${total} ج.م\n`;
+            msg += `تم تحويل ${paid} ج.م\n`;
+            msg += `متبقى ${remaining} ج.م عند الاستلام\n\n`;
+            msg += `👤 البائع: ${seller}`;
+
+            return msg;
+        }
+
+        // 1. وظيفة الإرسال للمسؤول (تحفظ البيانات في Firebase وتفتح واتساب المدير)
+        async function sendToAdmin() {
+            const name = document.getElementById('c-name').value;
+            const phone = document.getElementById('c-phone1').value;
+            const addr = document.getElementById('c-addr').value;
+
+            if (!name || !phone || !addr) {
+                alert("⚠️ يرجى ملء بيانات العميل أولاً.");
+                return;
+            }
+
+            try {
+                const seller = document.getElementById('active-s-name').innerText;
+                const gov = document.getElementById('c-gov').value;
+                const paid = Number(document.getElementById('c-paid').value) || 0;
+
+                let itemsForDb = [];
+                let batch = db.batch(); // استخدام Batch لتحديث عدة مستندات معاً
+
+                const qtyInputs = document.querySelectorAll('.s-qty');
+
+                for (const input of qtyInputs) {
+                    const qty = Number(input.value);
+                    if (qty > 0) {
+                        const productId = input.dataset.id;
+                        const p = allProducts.find(x => x.id === productId);
+
+                        // التحقق من توافر المخزون قبل الخصم
+                        if (p.stock < qty) {
+                            alert(`⚠️ المخزون غير كافٍ لمنتج: ${p.name}. المتوفر حالياً: ${p.stock}`);
+                            return; // إيقاف العملية إذا كان المخزون غير كافٍ
+                        }
+
+                        itemsForDb.push({
+                            id: productId,
+                            name: p.name,
+                            qty: qty,
+                            price: (p.price * qty)
+                        });
+
+                        // تجهيز عملية خصم المخزون
+                        const productRef = db.collection('products').doc(productId);
+                        batch.update(productRef, {
+                            stock: firebase.firestore.FieldValue.increment(-qty)
+                        });
+                    }
+                }
+
+                if (itemsForDb.length === 0) {
+                    alert("⚠️ لم تقم باختيار أي منتجات!");
+                    return;
+                }
+
+                // 1. حفظ الطلب في مجموعة الطلبات
+                await db.collection('orders').add({
+                    seller, customer: name, phone, city: gov, addr,
+                    items: itemsForDb,
+                    total: document.getElementById('f-total').innerText,
+                    paid, remaining: document.getElementById('f-rem').innerText,
+                    status: 'pending',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 2. تنفيذ خصم المخزون من المنتجات
+                await batch.commit();
+
+                const msg = buildInvoiceMessage();
+                window.open(`https://wa.me/${waBill}?text=${encodeURIComponent(msg)}`, '_blank');
+
+                alert("✅ تم تسجيل الطلب وخصم الكميات من المخزون بنجاح.");
+                loadData(); // إعادة تحميل البيانات لتحديث الأرقام أمام البائع
+            } catch (e) {
+                console.error(e);
+                alert("❌ حدث خطأ أثناء الحفظ وتحديث المخزون.");
+            }
+        }
+
+        // 2. وظيفة الإرسال للعميل (تفتح واتساب رقم العميل مباشرة)
+        function sendToCustomer() {
+            const phone = document.getElementById('c-phone1').value.trim();
+            if (!phone) {
+                alert("⚠️ لا يوجد رقم هاتف للعميل!");
+                return;
+            }
+
+            const msg = buildInvoiceMessage();
+
+            // تنسيق الرقم ليقبل واتساب (تحويل 010 إلى 2010)
+            let finalPhone = phone;
+            if (finalPhone.startsWith('0')) {
+                finalPhone = '2' + finalPhone;
+            }
+
+            window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        loadData();
+    </script>
+</body>
+
+</html>
