@@ -1,24 +1,24 @@
-const CACHE_NAME = 'hasad-v1';
-const assets = [
+const CACHE_NAME = 'hasad-cache-v1';
+const assetsToCache = [
+  '/',
   'index.html',
-  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+  'manifest.json'
 ];
 
-// تثبيت ملف الخدمة
-self.addEventListener('install', e => {
-  e.waitUntil(
+// تثبيت الـ Service Worker
+self.addEventListener('install', event => {
+  event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(assets);
+      return cache.addAll(assetsToCache);
     })
   );
 });
 
-// التعامل مع الطلبات (لجعل التطبيق سريعاً)
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(response => {
-      return response || fetch(e.request);
+// تفعيل الخدمة حتى لو كان الموبايل أوفلاين
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
     })
   );
 });

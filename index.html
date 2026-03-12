@@ -723,6 +723,13 @@
             }).join('');
             if (lowItems.length > 0) { alertBox.classList.remove('hidden'); alertList.innerHTML = lowItems.join(' - '); } else { alertBox.classList.add('hidden'); }
         }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('✅ تم تسجيل الخدمة بنجاح، التطبيق جاهز للتثبيت!'))
+                    .catch(err => console.log('❌ فشل تسجيل الخدمة:', err));
+            });
+        }
 
         function addSliderField(u = "") { document.getElementById('sl-inputs-container').insertAdjacentHTML('beforeend', `<div class="input-group mb-2"><input type="text" class="form-control input-glass sl-url" value="${u}"><button class="btn btn-danger" onclick="this.parentElement.remove()">X</button></div>`); }
         async function saveSliderData() { await db.collection('settings').doc('slider').set({ urls: Array.from(document.querySelectorAll('.sl-url')).map(i => i.value).filter(v => v) }); alert("تم تحديث السلايدر"); await loadData(); }
