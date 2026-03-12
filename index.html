@@ -90,6 +90,11 @@
                 background: white !important;
                 color: black !important;
                 padding: 20px;
+                direction: rtl;
+            }
+
+            .no-print {
+                display: none !important;
             }
         }
 
@@ -895,56 +900,65 @@
             }
 
             // 2. دالة الطباعة (المصلحة تماماً)
+            // دالة طباعة البيان المصلحة
             function printOrderInvoice(orderId) {
+                // 1. جلب بيانات الأوردر من المصفوفة المحملة مسبقاً
                 const order = loadedOrders.find(o => o.id === orderId);
-                if (!order) return alert("عفواً، تعذر العثور على بيانات هذا الطلب.");
+                if (!order) return alert("عفواً، لم يتم العثور على بيانات هذا الطلب.");
 
-                // جلب منطقة الطباعة أو إنشاؤها فوراً إذا لم تكن موجودة لمنع الـ Null Error
-                let printArea = document.getElementById('print-area');
-                if (!printArea) {
-                    printArea = document.createElement('div');
-                    printArea.id = 'print-area';
-                    document.body.appendChild(printArea);
-                }
+                const printArea = document.getElementById('print-area');
+                if (!printArea) return alert("خطأ فني: منطقة الطباعة غير معرفة.");
 
-                let itemsHtml = (order.items || []).map(i => `
+                // 2. تجهيز جدول المنتجات
+                let itemsRows = (order.items || []).map(i => `
         <tr>
-            <td style="border:1px solid black; padding:8px;">${i.name}</td>
-            <td style="border:1px solid black; padding:8px;">${i.qty}</td>
-            <td style="border:1px solid black; padding:8px;">${i.weight || '-'}</td>
+            <td style="border: 1px solid #000; padding: 8px;">${i.name}</td>
+            <td style="border: 1px solid #000; padding: 8px;">${i.qty}</td>
+            <td style="border: 1px solid #000; padding: 8px;">${i.weight || '-'}</td>
         </tr>
     `).join('');
 
-                // بناء محتوى البيان
+                // 3. حساب المبلغ المطلوب تحصيله (في حال عدم وجود remaining نأخذ total)
+                const collectAmount = order.remaining !== undefined ? order.remaining : (order.total || 0);
+
+                // 4. بناء محتوى البيان
                 printArea.innerHTML = `
-        <div style="direction:rtl; font-family:Arial; padding:20px; color:black;">
-            <div style="text-align:center; border-bottom:2px solid black; padding-bottom:10px;">
-                <h1 style="margin:0;">بيان تجهيز طلبية</h1>
-                <p style="margin:5px 0;">الحصاد الذكي للمنتجات الزراعية</p>
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+                <h2 style="margin: 0;">بيان تجهيز طلبية</h2>
+                <p style="margin: 5px 0;">متجر الحصاد الذكي للمنتجات الزراعية</p>
             </div>
-            <div style="margin:20px 0; font-size:18px;">
-                <p><strong>👤 العميل:</strong> ${order.customer}</p>
-                <p><strong>📱 الهاتف:</strong> ${order.phone}</p>
-                <p><strong>📍 العنوان:</strong> ${order.city} - ${order.addr}</p>
+            
+            <div style="margin-bottom: 20px; line-height: 1.6; font-size: 16px;">
+                <p><strong>👤 اسم العميل:</strong> ${order.customer || 'غير مسجل'}</p>
+                <p><strong>📱 الهاتف:</strong> ${order.phone || 'غير مسجل'}</p>
+                <p><strong>📍 العنوان:</strong> ${order.city || ''} - ${order.addr || ''}</p>
             </div>
-            <table style="width:100%; border-collapse:collapse; text-align:center; font-size:16px;">
+
+            <table style="width: 100%; border-collapse: collapse; text-align: center; margin-bottom: 20px;">
                 <thead>
-                    <tr style="background:#ddd;">
-                        <th style="border:1px solid black; padding:8px;">المنتج</th>
-                        <th style="border:1px solid black; padding:8px;">العدد</th>
-                        <th style="border:1px solid black; padding:8px;">الوزن</th>
+                    <tr style="background: #f0f0f0;">
+                        <th style="border: 1px solid #000; padding: 10px;">المنتج</th>
+                        <th style="border: 1px solid #000; padding: 10px;">العدد</th>
+                        <th style="border: 1px solid #000; padding: 10px;">الوزن</th>
                     </tr>
                 </thead>
-                <tbody>${itemsHtml}</tbody>
+                <tbody>
+                    ${itemsRows}
+                </tbody>
             </table>
-            <div style="margin-top:20px; padding:15px; border:2px solid black; display:inline-block; font-size:20px;">
-                <strong>💰 التحصيل المطلوب: ${order.remaining || order.total} ج.م</strong>
+
+            <div style="margin-top: 20px; padding: 15px; border: 2px solid #000; display: inline-block;">
+                <h3 style="margin: 0;">💰 التحصيل المطلوب: ${collectAmount} ج.م</h3>
             </div>
-            <p style="margin-top:40px; text-align:center; font-size:12px;">تاريخ الطلب: ${order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleString('ar-EG') : 'غير مسجل'}</p>
+
+            <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #555;">
+                تاريخ الطباعة: ${new Date().toLocaleString('ar-EG')} | بواسطة البائع: ${order.seller || 'نظام الإدارة'}
+            </div>
         </div>
     `;
 
-                // تنفيذ الطباعة
+                // 5. استدعاء أمر الطباعة الخاص بالمتصفح
                 window.print();
             }
 
@@ -1056,74 +1070,71 @@
                 showPage('details-page');
             }
             // دالة طباعة بيان التغليف
-            async function printOrderInvoice(orderId) {
-                try {
-                    const doc = await db.collection('orders').doc(orderId).get();
-                    if (!doc.exists) return alert("الأوردر غير موجود");
+            // دالة طباعة البيان - نسخة محصنة ضد أخطاء الـ Null
+            function printOrderInvoice(orderId) {
+                // 1. البحث عن بيانات الأوردر
+                const order = loadedOrders.find(o => o.id === orderId);
+                if (!order) return alert("عفواً، لم يتم العثور على بيانات الطلب.");
 
-                    const order = doc.data();
-                    const printDiv = document.getElementById('print-section');
-
-                    // بناء جدول المنتجات للطباعة
-                    let itemsRows = order.items.map(i => `
-            <tr>
-                <td style="padding: 10px; border: 1px solid #000;">${i.name}</td>
-                <td style="padding: 10px; border: 1px solid #000;">${i.qty}</td>
-                <td style="padding: 10px; border: 1px solid #000;">${i.weight || '-'}</td>
-            </tr>
-        `).join('');
-
-                    // تنسيق صفحة الطباعة
-                    printDiv.innerHTML = `
-            <div style="direction: rtl; font-family: 'Cairo', sans-serif; padding: 30px; color: #000; background: #fff;">
-                <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; mb-4">
-                    <h2>بيان تجهيز طلبية</h2>
-                    <p>الحصاد الذكي للمنتجات الزراعية</p>
-                </div>
-                
-                <div style="margin-top: 20px; line-height: 1.8;">
-                    <p><strong>👤 اسم العميل:</strong> ${order.customer}</p>
-                    <p><strong>📱 الهاتف:</strong> ${order.phone}</p>
-                    <p><strong>📍 العنوان:</strong> ${order.city} - ${order.addr}</p>
-                </div>
-
-                <table style="width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center;">
-                    <thead style="background: #eee;">
-                        <tr>
-                            <th style="padding: 10px; border: 1px solid #000;">المنتج</th>
-                            <th style="padding: 10px; border: 1px solid #000;">العدد</th>
-                            <th style="padding: 10px; border: 1px solid #000;">الوزن</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itemsRows}
-                    </tbody>
-                </table>
-
-                <div style="margin-top: 30px; padding: 15px; border: 1px dashed #000; text-align: left;">
-                    <h3 style="margin: 0;">💰 المطلوب تحصيله: <span style="font-size: 24px;">${order.remaining || order.total} ج.م</span></h3>
-                </div>
-
-                <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #666;">
-                    تاريخ الطباعة: ${new Date().toLocaleString('ar-EG')} | بواسطة البائع: ${order.seller}
-                </div>
-            </div>
-        `;
-
-                    // إظهار المحتوى للطباعة فقط ثم إخفاؤه
-                    const originalContent = document.body.innerHTML;
-                    const printContent = printDiv.innerHTML;
-
-                    document.body.innerHTML = printContent;
-                    window.print();
-
-                    // العودة للتطبيق بعد الطباعة
-                    location.reload();
-
-                } catch (error) {
-                    console.error("Print error:", error);
-                    alert("فشلت عملية الطباعة");
+                // 2. التحقق من وجود منطقة الطباعة أو إنشاؤها فوراً
+                let printArea = document.getElementById('print-area');
+                if (!printArea) {
+                    printArea = document.createElement('div');
+                    printArea.id = 'print-area';
+                    document.body.appendChild(printArea);
                 }
+
+                // 3. تجهيز بيانات المنتجات
+                let itemsRows = (order.items || []).map(i => `
+        <tr>
+            <td style="border: 1px solid #000; padding: 8px;">${i.name}</td>
+            <td style="border: 1px solid #000; padding: 8px;">${i.qty}</td>
+            <td style="border: 1px solid #000; padding: 8px;">${i.weight || '-'}</td>
+        </tr>
+    `).join('');
+
+                // 4. تحديد المبلغ المطلوب تحصيله (دعم الطلبات القديمة والجديدة)
+                const collectAmount = order.remaining !== undefined ? order.remaining : (order.total || 0);
+
+                // 5. بناء محتوى الورقة
+                printArea.innerHTML = `
+        <div style="direction: rtl; font-family: Arial, sans-serif; padding: 20px; color: #000; background: #fff;">
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
+                <h2 style="margin: 0;">بيان تجهيز طلبية</h2>
+                <p style="margin: 5px 0;">متجر الحصاد الذكي للمنتجات الزراعية</p>
+            </div>
+            
+            <div style="margin-bottom: 20px; line-height: 1.6; font-size: 16px;">
+                <p><strong>👤 اسم العميل:</strong> ${order.customer || 'غير مسجل'}</p>
+                <p><strong>📱 الهاتف:</strong> ${order.phone || 'غير مسجل'}</p>
+                <p><strong>📍 العنوان:</strong> ${order.city || ''} - ${order.addr || ''}</p>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; text-align: center; margin-bottom: 20px;">
+                <thead>
+                    <tr style="background: #f0f0f0;">
+                        <th style="border: 1px solid #000; padding: 10px;">المنتج</th>
+                        <th style="border: 1px solid #000; padding: 10px;">العدد</th>
+                        <th style="border: 1px solid #000; padding: 10px;">الوزن</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsRows}
+                </tbody>
+            </table>
+
+            <div style="margin-top: 20px; padding: 15px; border: 2px solid #000; display: inline-block;">
+                <h3 style="margin: 0;">💰 التحصيل المطلوب عند الاستلام: ${collectAmount} ج.م</h3>
+            </div>
+
+            <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #555;">
+                تاريخ الطباعة: ${new Date().toLocaleString('ar-EG')} | بواسطة البائع: ${order.seller || 'نظام الإدارة'}
+            </div>
+        </div>
+    `;
+
+                // 6. تنفيذ أمر الطباعة
+                window.print();
             }
 
             function renderAdminTable() {
