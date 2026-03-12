@@ -1074,6 +1074,22 @@
 
             window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(msg)}`, '_blank');
         }
+        // تسجيل Service Worker لتحويل الموقع لتطبيق
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('App Ready to be installed!'))
+                    .catch(err => console.log('Service Worker Error', err));
+            });
+        }
+
+        // ميزة اختيارية: زر لتثبيت التطبيق يظهر للمستخدم
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // يمكنك إظهار زر هنا "تثبيت التطبيق" إذا أردت
+        });
 
         loadData();
     </script>
