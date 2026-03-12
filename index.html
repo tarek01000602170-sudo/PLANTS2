@@ -32,21 +32,65 @@
             margin: 0;
         }
 
+        /* تحسين رؤية الكتابة */
         .glass-card {
-            background: var(--glass);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
+            color: #ffffff !important;
+            /* نص أبيض صريح */
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            /* ظل خفيف خلف الكلام */
         }
 
         .input-glass {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            color: white !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+            /* خلفية داكنة لضمان وضوح النص */
+            border: 1px solid var(--border) !important;
+            color: #ffffff !important;
+            /* نص أبيض صريح */
             border-radius: 10px;
+            font-weight: bold;
+        }
+
+        /* لضمان ظهور النص أثناء الكتابة في المتصفحات المختلفة */
+        .input-glass:focus {
+            background: rgba(0, 0, 0, 0.7) !important;
+            outline: none;
+            box-shadow: 0 0 10px rgba(45, 90, 39, 0.5);
+        }
+
+        .form-label,
+        h5,
+        h4,
+        h3,
+        h6 {
+            color: #f1f1f1 !important;
+        }
+
+        /* تنسيق خاص لجعل منطقة الطباعة مخفية في المتصفح وتظهر فقط عند الورقة */
+        #print-area {
+            display: none;
+        }
+
+        /* تنسيق خاص للطباعة */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #print-area,
+            #print-area * {
+                visibility: visible;
+            }
+
+            #print-area {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white !important;
+                color: black !important;
+                padding: 20px;
+            }
         }
 
         .hidden {
@@ -155,7 +199,14 @@
     <!-- Floating Support Button -->
     <a href="#" id="wa-support-btn" target="_blank" class="btn btn-success shadow-lg"><i
             class="fab fa-whatsapp fa-2x"></i></a>
-
+    <div class="glass-card mb-4 p-3">
+        <h5>البحث عن أوردر للتعديل</h5>
+        <div class="input-group">
+            <input type="text" id="order-search-input" class="form-control input-glass"
+                placeholder="ابحث برقم الهاتف أو رقم الفاتورة...">
+            <button onclick="searchOrders()" class="btn btn-warning"><i class="fas fa-search"></i> بحث</button>
+        </div>
+    </div>
     <!-- Navigation Bar -->
     <nav class="navbar navbar-dark bg-dark bg-opacity-50 sticky-top">
         <div class="container">
@@ -173,12 +224,15 @@
     <div class="container mt-3">
 
         <!-- Section 1: Seller Login (Always populates from DB) -->
-        <section id="seller-login" class="page-section">
-            <div class="glass-card col-md-5 mx-auto text-center py-5">
-                <i class="fas fa-user-tie fa-4x mb-3 text-success"></i>
-                <h3>تسجيل دخول البائعين</h3>
-                <select id="seller-select-box" class="form-select input-glass my-4"></select>
-                <button onclick="enterSellerMode()" class="btn btn-success w-100 fw-bold p-2">دخول النظام</button>
+        <section id="seller-login" class="page-section text-center">
+            <div class="glass-card col-md-5 mx-auto py-5">
+                <h3>دخول البائعين</h3>
+                <select id="seller-select-box" class="form-select input-glass my-3"></select>
+                <!-- خانة كلمة السر -->
+                <input type="password" id="seller-pass-input" class="form-control input-glass mb-3 text-center"
+                    placeholder="كلمة السر">
+                <button onclick="enterSellerMode()" class="btn btn-success w-100 fw-bold">دخول</button>
+                <p class="small mt-2 text-info">* إذا كانت أول مرة، اكتب كلمة سر جديدة ليتم حفظها.</p>
             </div>
         </section>
 
@@ -417,327 +471,686 @@
         </section>
 
         <!-- Section 7: Packaging -->
+        <!-- 7. شاشة التغليف (Packaging Page) -->
         <section id="packaging-page" class="page-section hidden">
             <div class="glass-card">
-                <h3>شاشة التغليف والشحن (<span id="pending-count">0</span>)</h3>
-                <div id="p-orders-container" class="row"></div>
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+                    <h3><i class="fas fa-box-open text-info me-2"></i> شاشة التغليف والشحن</h3>
+                    <span class="badge bg-info p-2" id="pending-count">جاري التحميل...</span>
+                </div>
+
+                <!-- الحاوية التي ستظهر فيها الطلبات -->
+                <div id="p-orders-container" class="row">
+                    <div class="text-center p-5 w-100">
+                        <div class="spinner-border text-light" role="status"></div>
+                        <p class="mt-2">جاري مزامنة الطلبات من السيرفر...</p>
+                    </div>
+                </div>
             </div>
         </section>
-    </div>
 
-    <!-- Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+        <!-- حاوية الطباعة (مخفية دائماً وتظهر فقط عند الطباعة) -->
+        <div id="print-area" class="d-none"></div>
+        <!-- Scripts -->
+        <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
-    <script>
-        // 1. Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDvvVN8lHyBtnqNA47hl7cWUEGaXA-AvVA",
-            authDomain: "plants-a4dec.firebaseapp.com",
-            projectId: "plants-a4dec",
-            storageBucket: "plants-a4dec.firebasestorage.app",
-            messagingSenderId: "75534607682",
-            appId: "1:75534607682:web:32abc0c4294397efecd4db",
-            measurementId: "G-PMT2M5LXHM"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        <script>
+            // 1. Firebase Configuration
+            const firebaseConfig = {
+                apiKey: "AIzaSyDvvVN8lHyBtnqNA47hl7cWUEGaXA-AvVA",
+                authDomain: "plants-a4dec.firebaseapp.com",
+                projectId: "plants-a4dec",
+                storageBucket: "plants-a4dec.firebasestorage.app",
+                messagingSenderId: "75534607682",
+                appId: "1:75534607682:web:32abc0c4294397efecd4db",
+                measurementId: "G-PMT2M5LXHM"
+            };
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
 
-        let allProducts = [], categories = {}, editingId = null, waBill = "";
-        const govs = ["القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "الغربية", "الشرقية", "المنوفية", "البحيرة", "دمياط", "كفر الشيخ", "القليوبية", "بورسعيد", "الإسماعيلية", "السويس", "الفيوم", "بني سويف", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", "مطروح", "شمال سيناء", "جنوب سيناء", "الوادي الجديد", "البحر الأحمر"];
+            let allProducts = [], categories = {}, editingId = null, waBill = "";
+            const govs = ["القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "الغربية", "الشرقية", "المنوفية", "البحيرة", "دمياط", "كفر الشيخ", "القليوبية", "بورسعيد", "الإسماعيلية", "السويس", "الفيوم", "بني سويف", "المنيا", "أسيوط", "سوهاج", "قنا", "الأقصر", "أسوان", "مطروح", "شمال سيناء", "جنوب سيناء", "الوادي الجديد", "البحر الأحمر"];
 
-        // 2. Navigation & Hash Logic (Fix Refresh Problem)
-        function showPage(id, updateHash = true) {
-            document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
-            const target = document.getElementById(id);
-            if (target) {
-                target.classList.remove('hidden');
-                if (updateHash) window.location.hash = id;
-            }
-            window.scrollTo(0, 0);
-        }
-
-        // الكود الذي يعمل فور فتح الموقع أو عمل ريفريش
-        window.addEventListener('load', async () => {
-            // 1. تحميل البيانات الأساسية
-            await loadData();
-
-            // 2. قراءة الصفحة الحالية من الرابط (Hash)
-            const currentHash = window.location.hash.replace('#', '');
-
-            if (currentHash) {
-                // إذا كان هناك صفحة محددة في الرابط، ابقَ عليها
-                showPage(currentHash, false);
-            } else {
-                // --- التعديل هنا: الفتح على الصفحة الرئيسية بدلاً من تسجيل الدخول ---
-                showPage('home-page', false);
+            // 2. Navigation & Hash Logic (Fix Refresh Problem)
+            function showPage(id, updateHash = true) {
+                document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
+                const target = document.getElementById(id);
+                if (target) {
+                    target.classList.remove('hidden');
+                    if (updateHash) window.location.hash = id;
+                }
+                window.scrollTo(0, 0);
             }
 
-            // تشغيل مراقب طلبات التغليف
-            startPackagingListener();
-        });
+            // الكود الذي يعمل فور فتح الموقع أو عمل ريفريش
+            window.addEventListener('load', async () => {
+                // 1. تحميل البيانات الأساسية
+                await loadData();
 
-        window.addEventListener('hashchange', () => {
-            const hash = window.location.hash.replace('#', '');
-            if (hash) showPage(hash, false);
-        });
+                // 2. قراءة الصفحة الحالية من الرابط (Hash)
+                const currentHash = window.location.hash.replace('#', '');
 
-        function promptAdmin() { if (prompt("User") === 'admin' && prompt("Pass") === 'gold123') showPage('admin-page'); }
+                if (currentHash) {
+                    // إذا كان هناك صفحة محددة في الرابط، ابقَ عليها
+                    showPage(currentHash, false);
+                } else {
+                    // --- التعديل هنا: الفتح على الصفحة الرئيسية بدلاً من تسجيل الدخول ---
+                    showPage('home-page', false);
+                }
 
-        // 3. Load All Data (Miser Mode & Slider Fix)
-        async function loadData() {
-            try {
-                const [cSnap, sSnap, pSnap, slSnap] = await Promise.all([
-                    db.collection('cats').get(),
-                    db.collection('settings').doc('general').get(),
-                    db.collection('products').get(),
-                    db.collection('settings').doc('slider').get()
-                ]);
+                // تشغيل مراقب طلبات التغليف
+                startPackagingListener();
+            });
 
-                // Categories
-                const pMainCatSelect = document.getElementById('p-main-cat');
-                const mCatsAdminDiv = document.getElementById('m-cats-list-admin');
-                pMainCatSelect.innerHTML = ''; mCatsAdminDiv.innerHTML = '';
-                cSnap.forEach(doc => {
-                    categories[doc.id] = doc.data().subs || [];
-                    pMainCatSelect.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
-                    mCatsAdminDiv.innerHTML += `<div class="d-flex justify-content-between mb-2 glass-card p-2 border-0"><span>${doc.id}</span> <button class="btn btn-danger btn-sm" onclick="delMCat('${doc.id}')">حذف</button></div>`;
+            window.addEventListener('hashchange', () => {
+                const hash = window.location.hash.replace('#', '');
+                if (hash) showPage(hash, false);
+            });
+
+            function promptAdmin() { if (prompt("User") === 'admin' && prompt("Pass") === 'gold123') showPage('admin-page'); }
+
+            // 3. Load All Data (Miser Mode & Slider Fix)
+            async function loadData() {
+                try {
+                    const [cSnap, sSnap, pSnap, slSnap] = await Promise.all([
+                        db.collection('cats').get(),
+                        db.collection('settings').doc('general').get(),
+                        db.collection('products').get(),
+                        db.collection('settings').doc('slider').get()
+                    ]);
+
+                    // Categories
+                    const pMainCatSelect = document.getElementById('p-main-cat');
+                    const mCatsAdminDiv = document.getElementById('m-cats-list-admin');
+                    pMainCatSelect.innerHTML = ''; mCatsAdminDiv.innerHTML = '';
+                    cSnap.forEach(doc => {
+                        categories[doc.id] = doc.data().subs || [];
+                        pMainCatSelect.innerHTML += `<option value="${doc.id}">${doc.id}</option>`;
+                        mCatsAdminDiv.innerHTML += `<div class="d-flex justify-content-between mb-2 glass-card p-2 border-0"><span>${doc.id}</span> <button class="btn btn-danger btn-sm" onclick="delMCat('${doc.id}')">حذف</button></div>`;
+                    });
+
+                    // Settings & Support
+                    if (sSnap.exists) {
+                        const data = sSnap.data();
+                        waBill = data.bill || "";
+                        document.getElementById('wa-bill').value = waBill;
+                        document.getElementById('wa-supp').value = data.supp || "";
+                        document.getElementById('wa-support-btn').href = `https://wa.me/${data.supp}`;
+                    }
+
+                    // Slider Implementation
+                    const sliderContent = document.getElementById('slider-content');
+                    const adminSlInputs = document.getElementById('sl-inputs-container');
+                    if (slSnap.exists) {
+                        const urls = slSnap.data().urls || [];
+                        if (urls.length > 0) {
+                            sliderContent.innerHTML = urls.map((u, i) => `<div class="carousel-item ${i === 0 ? 'active' : ''}"><img src="${u}" class="d-block w-100"></div>`).join('');
+                            adminSlInputs.innerHTML = '';
+                            urls.forEach(u => addSliderField(u));
+                            // Re-init Carousel
+                            new bootstrap.Carousel('#mainCarousel', { interval: 3000, ride: 'carousel' });
+                        }
+                    }
+
+                    // Products & Sellers
+                    allProducts = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderHome(); renderAdminTable(); renderSellerProds(); await loadSellers();
+                    document.getElementById('c-gov').innerHTML = govs.map(g => `<option>${g}</option>`).join('');
+
+                } catch (e) { console.error("Load Error:", e); }
+            }
+
+            // 4. Product CRUD
+            async function saveProduct() {
+                const p = {
+                    name: document.getElementById('p-name').value,
+                    price: Number(document.getElementById('p-price').value),
+                    weight: document.getElementById('p-weight').value,
+                    stock: Number(document.getElementById('p-stock').value),
+                    available: document.getElementById('p-available').value === "true",
+                    desc: document.getElementById('p-desc').value,
+                    mainCat: document.getElementById('p-main-cat').value,
+                    images: Array.from(document.querySelectorAll('.p-img')).map(i => i.value).filter(v => v)
+                };
+                try {
+                    if (editingId) await db.collection('products').doc(editingId).update(p);
+                    else await db.collection('products').add(p);
+                    alert("✅ تمت العملية بنجاح");
+                    resetPForm(); await loadData();
+                } catch (e) { alert("❌ فشل الحفظ"); }
+            }
+
+            function editP(id) {
+                const p = allProducts.find(x => x.id === id);
+                if (!p) return;
+                editingId = id;
+                document.getElementById('p-name').value = p.name;
+                document.getElementById('p-price').value = p.price;
+                document.getElementById('p-weight').value = p.weight || '';
+                document.getElementById('p-stock').value = p.stock || 0;
+                document.getElementById('p-available').value = p.available ? "true" : "false";
+                document.getElementById('p-desc').value = p.desc || '';
+                document.getElementById('p-main-cat').value = p.mainCat;
+                const imgInputs = document.getElementById('img-inputs');
+                imgInputs.innerHTML = p.images.map(img => `<input type="text" value="${img}" class="form-control input-glass mb-2 p-img">`).join('') || '<input type="text" placeholder="رابط صورة" class="form-control input-glass mb-2 p-img">';
+                document.getElementById('save-btn').innerText = "تحديث المنتج";
+                document.getElementById('form-title').innerText = "تعديل: " + p.name;
+                window.scrollTo(0, 0);
+            }
+
+            async function delP(id) { if (confirm("⚠️ هل تريد حذف المنتج نهائياً؟")) { await db.collection('products').doc(id).delete(); await loadData(); } }
+            function resetPForm() { editingId = null; document.getElementById('save-btn').innerText = "حفظ"; document.getElementById('form-title').innerText = "إضافة منتج جديد"; document.querySelectorAll('#p-tab input, #p-tab textarea').forEach(i => i.value = ""); document.getElementById('img-inputs').innerHTML = '<input type="text" placeholder="رابط صورة" class="form-control input-glass mb-2 p-img">'; }
+
+            // Excel & Category Helpers
+            function downloadExcelTemplate() { XLSX.writeFile(XLSX.utils.book_new().appendChild(XLSX.utils.aoa_to_sheet([["اسم المنتج", "السعر", "الوزن", "المخزون", "الوصف", "متوفر (نعم/لا)"]])), "Template.xlsx"); }
+            async function importFromExcel(e) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const data = new Uint8Array(event.target.result);
+                    const jsonData = XLSX.utils.sheet_to_json(XLSX.read(data, { type: 'array' }).Sheets[XLSX.read(data, { type: 'array' }).SheetNames[0]]);
+                    for (let row of jsonData) {
+                        if (row["اسم المنتج"]) await db.collection('products').add({ name: row["اسم المنتج"].toString(), price: Number(row["السعر"]) || 0, weight: row["الوزن"] || "", stock: Number(row["المخزون"]) || 0, available: row["متوفر (نعم/لا)"] === "نعم", desc: row["الوصف"] || "", images: [], mainCat: "عام" });
+                    }
+                    alert("تم الاستيراد بنجاح"); await loadData();
+                };
+                reader.readAsArrayBuffer(e.target.files[0]);
+            }
+            async function addMCat() { await db.collection('cats').doc(document.getElementById('new-m-cat').value).set({ subs: [] }); await loadData(); }
+            async function delMCat(id) { if (confirm("حذف الفئة؟")) { await db.collection('cats').doc(id).delete(); await loadData(); } }
+
+            // 5. Seller & Invoice Logic
+            async function loadSellers() {
+                const snap = await db.collection('sellers').get();
+                const loginSelect = document.getElementById('seller-select-box');
+                const adminList = document.getElementById('admin-sellers-list');
+                loginSelect.innerHTML = ''; adminList.innerHTML = '';
+                snap.forEach(doc => {
+                    const s = doc.data();
+                    loginSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+                    adminList.innerHTML += `<li class="list-group-item bg-transparent text-white d-flex justify-content-between border-secondary">${s.name} <button class="btn btn-danger btn-sm" onclick="delSeller('${doc.id}')">X</button></li>`;
+                });
+            }
+            async function addSeller() { await db.collection('sellers').add({ name: document.getElementById('new-seller-input').value }); document.getElementById('new-seller-input').value = ""; await loadSellers(); }
+            async function delSeller(id) { await db.collection('sellers').doc(id).delete(); await loadSellers(); }
+            function enterSellerMode() {
+                const selectedSeller = document.getElementById('seller-select-box').value;
+                if (!selectedSeller) {
+                    alert("يرجى اختيار اسم البائع أولاً");
+                    return;
+                }
+
+                // تعيين اسم البائع النشط
+                document.getElementById('active-s-name').innerText = selectedSeller;
+
+                // التوجيه لصفحة إنشاء الأوردرات مباشرة
+                showPage('seller-order');
+
+                alert("مرحباً بك يا " + selectedSeller + "، يمكنك الآن البدء بتسجيل الطلبات.");
+            }
+
+            function renderSellerProds() {
+                const container = document.getElementById('seller-prods');
+                container.innerHTML = "";
+
+                // تجميع المنتجات حسب الفئة الرئيسية
+                const grouped = {};
+                allProducts.forEach(p => {
+                    if (!grouped[p.mainCat]) grouped[p.mainCat] = [];
+                    grouped[p.mainCat].push(p);
                 });
 
-                // Settings & Support
-                if (sSnap.exists) {
-                    const data = sSnap.data();
-                    waBill = data.bill || "";
-                    document.getElementById('wa-bill').value = waBill;
-                    document.getElementById('wa-supp').value = data.supp || "";
-                    document.getElementById('wa-support-btn').href = `https://wa.me/${data.supp}`;
-                }
-
-                // Slider Implementation
-                const sliderContent = document.getElementById('slider-content');
-                const adminSlInputs = document.getElementById('sl-inputs-container');
-                if (slSnap.exists) {
-                    const urls = slSnap.data().urls || [];
-                    if (urls.length > 0) {
-                        sliderContent.innerHTML = urls.map((u, i) => `<div class="carousel-item ${i === 0 ? 'active' : ''}"><img src="${u}" class="d-block w-100"></div>`).join('');
-                        adminSlInputs.innerHTML = '';
-                        urls.forEach(u => addSliderField(u));
-                        // Re-init Carousel
-                        new bootstrap.Carousel('#mainCarousel', { interval: 3000, ride: 'carousel' });
-                    }
-                }
-
-                // Products & Sellers
-                allProducts = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderHome(); renderAdminTable(); renderSellerProds(); await loadSellers();
-                document.getElementById('c-gov').innerHTML = govs.map(g => `<option>${g}</option>`).join('');
-
-            } catch (e) { console.error("Load Error:", e); }
-        }
-
-        // 4. Product CRUD
-        async function saveProduct() {
-            const p = {
-                name: document.getElementById('p-name').value,
-                price: Number(document.getElementById('p-price').value),
-                weight: document.getElementById('p-weight').value,
-                stock: Number(document.getElementById('p-stock').value),
-                available: document.getElementById('p-available').value === "true",
-                desc: document.getElementById('p-desc').value,
-                mainCat: document.getElementById('p-main-cat').value,
-                images: Array.from(document.querySelectorAll('.p-img')).map(i => i.value).filter(v => v)
-            };
-            try {
-                if (editingId) await db.collection('products').doc(editingId).update(p);
-                else await db.collection('products').add(p);
-                alert("✅ تمت العملية بنجاح");
-                resetPForm(); await loadData();
-            } catch (e) { alert("❌ فشل الحفظ"); }
-        }
-
-        function editP(id) {
-            const p = allProducts.find(x => x.id === id);
-            if (!p) return;
-            editingId = id;
-            document.getElementById('p-name').value = p.name;
-            document.getElementById('p-price').value = p.price;
-            document.getElementById('p-weight').value = p.weight || '';
-            document.getElementById('p-stock').value = p.stock || 0;
-            document.getElementById('p-available').value = p.available ? "true" : "false";
-            document.getElementById('p-desc').value = p.desc || '';
-            document.getElementById('p-main-cat').value = p.mainCat;
-            const imgInputs = document.getElementById('img-inputs');
-            imgInputs.innerHTML = p.images.map(img => `<input type="text" value="${img}" class="form-control input-glass mb-2 p-img">`).join('') || '<input type="text" placeholder="رابط صورة" class="form-control input-glass mb-2 p-img">';
-            document.getElementById('save-btn').innerText = "تحديث المنتج";
-            document.getElementById('form-title').innerText = "تعديل: " + p.name;
-            window.scrollTo(0, 0);
-        }
-
-        async function delP(id) { if (confirm("⚠️ هل تريد حذف المنتج نهائياً؟")) { await db.collection('products').doc(id).delete(); await loadData(); } }
-        function resetPForm() { editingId = null; document.getElementById('save-btn').innerText = "حفظ"; document.getElementById('form-title').innerText = "إضافة منتج جديد"; document.querySelectorAll('#p-tab input, #p-tab textarea').forEach(i => i.value = ""); document.getElementById('img-inputs').innerHTML = '<input type="text" placeholder="رابط صورة" class="form-control input-glass mb-2 p-img">'; }
-
-        // Excel & Category Helpers
-        function downloadExcelTemplate() { XLSX.writeFile(XLSX.utils.book_new().appendChild(XLSX.utils.aoa_to_sheet([["اسم المنتج", "السعر", "الوزن", "المخزون", "الوصف", "متوفر (نعم/لا)"]])), "Template.xlsx"); }
-        async function importFromExcel(e) {
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                const data = new Uint8Array(event.target.result);
-                const jsonData = XLSX.utils.sheet_to_json(XLSX.read(data, { type: 'array' }).Sheets[XLSX.read(data, { type: 'array' }).SheetNames[0]]);
-                for (let row of jsonData) {
-                    if (row["اسم المنتج"]) await db.collection('products').add({ name: row["اسم المنتج"].toString(), price: Number(row["السعر"]) || 0, weight: row["الوزن"] || "", stock: Number(row["المخزون"]) || 0, available: row["متوفر (نعم/لا)"] === "نعم", desc: row["الوصف"] || "", images: [], mainCat: "عام" });
-                }
-                alert("تم الاستيراد بنجاح"); await loadData();
-            };
-            reader.readAsArrayBuffer(e.target.files[0]);
-        }
-        async function addMCat() { await db.collection('cats').doc(document.getElementById('new-m-cat').value).set({ subs: [] }); await loadData(); }
-        async function delMCat(id) { if (confirm("حذف الفئة؟")) { await db.collection('cats').doc(id).delete(); await loadData(); } }
-
-        // 5. Seller & Invoice Logic
-        async function loadSellers() {
-            const snap = await db.collection('sellers').get();
-            const loginSelect = document.getElementById('seller-select-box');
-            const adminList = document.getElementById('admin-sellers-list');
-            loginSelect.innerHTML = ''; adminList.innerHTML = '';
-            snap.forEach(doc => {
-                const s = doc.data();
-                loginSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
-                adminList.innerHTML += `<li class="list-group-item bg-transparent text-white d-flex justify-content-between border-secondary">${s.name} <button class="btn btn-danger btn-sm" onclick="delSeller('${doc.id}')">X</button></li>`;
-            });
-        }
-        async function addSeller() { await db.collection('sellers').add({ name: document.getElementById('new-seller-input').value }); document.getElementById('new-seller-input').value = ""; await loadSellers(); }
-        async function delSeller(id) { await db.collection('sellers').doc(id).delete(); await loadSellers(); }
-        function enterSellerMode() {
-            const selectedSeller = document.getElementById('seller-select-box').value;
-            if (!selectedSeller) {
-                alert("يرجى اختيار اسم البائع أولاً");
-                return;
-            }
-
-            // تعيين اسم البائع النشط
-            document.getElementById('active-s-name').innerText = selectedSeller;
-
-            // التوجيه لصفحة إنشاء الأوردرات مباشرة
-            showPage('seller-order');
-
-            alert("مرحباً بك يا " + selectedSeller + "، يمكنك الآن البدء بتسجيل الطلبات.");
-        }
-
-        function renderSellerProds() {
-            document.getElementById('seller-prods').innerHTML = allProducts.filter(p => p.available).map(p => `
+                for (let cat in grouped) {
+                    let catHtml = `<div class="col-12 mt-3"><h5 class="text-success border-bottom">${cat}</h5></div>`;
+                    catHtml += grouped[cat].map(p => `
             <div class="col-md-6 mb-2 seller-prod-item" data-name="${p.name}">
                 <div class="glass-card p-2 border-0 shadow-sm h-100">
                     <label class="fw-bold small mb-1">${p.name} (${p.price} ج.م)</label>
-                    <input type="number" class="form-control input-glass s-qty" data-id="${p.id}" onchange="reCalc()" placeholder="الكمية">
-                    <input type="text" class="form-control input-glass mt-1 s-note" data-id="${p.id}" placeholder="ملاحظة">
+                    <input type="number" class="form-control input-glass s-qty" data-id="${p.id}" data-weight="${p.weight}" onchange="reCalc()" placeholder="الكمية">
                 </div>
             </div>`).join('');
-        }
-
-        function reCalc() {
-            let sub = 0;
-            document.querySelectorAll('.s-qty').forEach(i => { if (i.value > 0) { const p = allProducts.find(x => x.id === i.dataset.id); sub += (p.price * i.value); } });
-            const total = sub + 50; const paid = Number(document.getElementById('c-paid').value) || 0;
-            document.getElementById('f-sub').innerText = sub; document.getElementById('f-total').innerText = total; document.getElementById('f-rem').innerText = total - paid;
-        }
-
-        function buildInvoiceMessage() {
-            const name = document.getElementById('c-name').value;
-            const phone = document.getElementById('c-phone1').value;
-            const gov = document.getElementById('c-gov').value;
-            const addr = document.getElementById('c-addr').value;
-            let itemsText = "";
-            document.querySelectorAll('.s-qty').forEach(i => { if (i.value > 0) { const p = allProducts.find(x => x.id === i.dataset.id); itemsText += `${i.value} | ${p.name} | ${p.price * i.value} ج.م\n`; } });
-            let msg = `👤 العميل: ${name}\n📱 الهاتف: ${phone}\n📍 المحافظة: ${gov}\n🏠 العنوان: ${gov} - ${addr}\n\n🛒 تفاصيل المنتجات:\n${itemsText}\n*إجمالي المنتجات:* ${document.getElementById('f-sub').innerText} ج.م\nمصاريف الشحن: 50 ج.م\n💰 الإجمالي النهائي: ${document.getElementById('f-total').innerText} ج.م\nتم تحويل ${document.getElementById('c-paid').value} ج.م\nمتبقى ${document.getElementById('f-rem').innerText} ج.م عند الاستلام\n\n👤 البائع: ${document.getElementById('active-s-name').innerText}`;
-            return msg;
-        }
-
-        async function sendToAdmin() {
-            let batch = db.batch(); let itemsDb = [];
-            document.querySelectorAll('.s-qty').forEach(i => {
-                if (i.value > 0) {
-                    const p = allProducts.find(x => x.id === i.dataset.id);
-                    if (p.stock < i.value) alert(`المخزون غير كاف لـ ${p.name}`);
-                    itemsDb.push({ name: p.name, qty: i.value, price: p.price * i.value });
-                    batch.update(db.collection('products').doc(p.id), { stock: firebase.firestore.FieldValue.increment(-i.value) });
+                    container.innerHTML += catHtml;
                 }
-            });
-            await db.collection('orders').add({ seller: document.getElementById('active-s-name').innerText, customer: document.getElementById('c-name').value, phone: document.getElementById('c-phone1').value, city: document.getElementById('c-gov').value, addr: document.getElementById('c-addr').value, items: itemsDb, status: 'pending', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-            await batch.commit();
-            window.open(`https://wa.me/${waBill}?text=${encodeURIComponent(buildInvoiceMessage())}`, '_blank');
-            alert("✅ تم الحفظ والإرسال للمسؤول"); await loadData();
-        }
+            }
+            // دالة لتحديث عداد المنتجات المختارة
+            function updateCheckedCount() {
+                let totalQty = 0;
+                document.querySelectorAll('.pack-item-check:checked').forEach(chk => {
+                    totalQty += Number(chk.dataset.qty);
+                });
+                document.getElementById('checked-items-count').innerText = totalQty;
+            }
 
-        function sendToCustomer() {
-            let phone = document.getElementById('c-phone1').value;
-            if (phone.startsWith('0')) phone = '2' + phone;
-            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(buildInvoiceMessage())}`, '_blank');
-        }
+            // دالة الطباعة الاحترافية
+            function printOrder(orderId) {
+                const order = currentOrders.find(o => o.id === orderId); // نفترض تخزين الطلبات في مصفوفة
+                const printDiv = document.getElementById('print-section');
 
-        // 6. Packaging Real-time
-        function startPackagingListener() {
-            db.collection('orders').orderBy('timestamp', 'desc').onSnapshot(snap => {
-                document.getElementById('p-orders-container').innerHTML = snap.docs.map(doc => {
-                    const o = doc.data(); const isSent = o.status === 'sent';
-                    return `<div class="col-md-6 mb-3"><div class="glass-card border ${isSent ? 'border-success opacity-75' : 'border-info'}">
-                <h5 class="text-warning">${o.customer}</h5><p class="small m-0">${o.phone}</p><p class="small">${o.city} - ${o.addr}</p><hr class="my-1">
-                <ul class="list-unstyled small">${o.items.map(i => `<li><input type="checkbox" class="form-check-input me-1"> ${i.qty} × ${i.name}</li>`).join('')}</ul>
-                ${!isSent ? `<button onclick="db.collection('orders').doc('${doc.id}').update({status:'sent'})" class="btn btn-success btn-sm w-100 mt-2">تم الإرسال ✓</button>` : ''}
-                </div></div>`;
+                let itemsHtml = order.items.map(i => `
+        <tr>
+            <td>${i.name}</td>
+            <td>${i.qty}</td>
+            <td>${i.weight || '-'}</td>
+        </tr>
+    `).join('');
+
+                printDiv.innerHTML = `
+        <div style="direction: rtl; padding: 20px; font-family: Cairo, sans-serif;">
+            <h2 style="text-align:center">فاتورة تجهيز طلب</h2>
+            <hr>
+            <p><strong>اسم العميل:</strong> ${order.customer}</p>
+            <p><strong>التليفون:</strong> ${order.phone}</p>
+            <p><strong>العنوان:</strong> ${order.city} - ${order.addr}</p>
+            <table border="1" style="width:100%; text-align:center; border-collapse: collapse;">
+                <thead><tr><th>المنتج</th><th>العدد</th><th>الوزن</th></tr></thead>
+                <tbody>${itemsHtml}</tbody>
+            </table>
+            <h3 style="margin-top:20px">التحصيل المطلوب: ${order.remaining || order.total} ج.م</h3>
+            <hr>
+            <p style="text-align:center">شكراً لثقتكم بنا - الحصاد الذكي</p>
+        </div>
+    `;
+                window.print();
+            }
+
+            function reCalc() {
+                let sub = 0;
+                document.querySelectorAll('.s-qty').forEach(i => { if (i.value > 0) { const p = allProducts.find(x => x.id === i.dataset.id); sub += (p.price * i.value); } });
+                const total = sub + 50; const paid = Number(document.getElementById('c-paid').value) || 0;
+                document.getElementById('f-sub').innerText = sub; document.getElementById('f-total').innerText = total; document.getElementById('f-rem').innerText = total - paid;
+            }
+
+            function buildInvoiceMessage() {
+                const name = document.getElementById('c-name').value;
+                const phone = document.getElementById('c-phone1').value;
+                const gov = document.getElementById('c-gov').value;
+                const addr = document.getElementById('c-addr').value;
+                let itemsText = "";
+                document.querySelectorAll('.s-qty').forEach(i => { if (i.value > 0) { const p = allProducts.find(x => x.id === i.dataset.id); itemsText += `${i.value} | ${p.name} | ${p.price * i.value} ج.م\n`; } });
+                let msg = `👤 العميل: ${name}\n📱 الهاتف: ${phone}\n📍 المحافظة: ${gov}\n🏠 العنوان: ${gov} - ${addr}\n\n🛒 تفاصيل المنتجات:\n${itemsText}\n*إجمالي المنتجات:* ${document.getElementById('f-sub').innerText} ج.م\nمصاريف الشحن: 50 ج.م\n💰 الإجمالي النهائي: ${document.getElementById('f-total').innerText} ج.م\nتم تحويل ${document.getElementById('c-paid').value} ج.م\nمتبقى ${document.getElementById('f-rem').innerText} ج.م عند الاستلام\n\n👤 البائع: ${document.getElementById('active-s-name').innerText}`;
+                return msg;
+            }
+
+            // 1. إرسال للمسؤول (حفظ + واتساب)
+            async function sendToAdmin() {
+                const name = document.getElementById('c-name').value;
+                const phone = document.getElementById('c-phone1').value;
+
+                if (!name || !phone) return alert("⚠️ يرجى إدخال اسم العميل ورقم هاتفه");
+
+                try {
+                    let itemsForDb = [];
+                    let batch = db.batch();
+
+                    document.querySelectorAll('.s-qty').forEach(i => {
+                        if (i.value > 0) {
+                            const p = allProducts.find(x => x.id === i.dataset.id);
+                            itemsForDb.push({ name: p.name, qty: i.value, price: (p.price * i.value) });
+
+                            // خصم من المخزون (سيتم الخصم حتى لو أصبح بالسالب)
+                            const ref = db.collection('products').doc(p.id);
+                            batch.update(ref, { stock: firebase.firestore.FieldValue.increment(-Number(i.value)) });
+                        }
+                    });
+
+                    // حفظ البيانات في Firebase
+                    const orderData = {
+                        seller: document.getElementById('active-s-name').innerText,
+                        customer: name, phone, city: document.getElementById('c-gov').value,
+                        addr: document.getElementById('c-addr').value,
+                        items: itemsForDb,
+                        subtotal: document.getElementById('f-sub').innerText,
+                        shipping: document.getElementById('f-ship').innerText,
+                        total: document.getElementById('f-total').innerText,
+                        paid: document.getElementById('c-paid').value,
+                        remaining: document.getElementById('f-rem').innerText,
+                        status: 'pending',
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    if (editingId) {
+                        await db.collection('orders').doc(editingId).update(orderData);
+                    } else {
+                        await db.collection('orders').add(orderData);
+                    }
+
+                    await batch.commit(); // تنفيذ خصم المخزون
+
+                    // إرسال الواتساب مباشرة
+                    const msg = buildInvoiceMessage();
+                    window.open(`https://wa.me/${waBill}?text=${encodeURIComponent(msg)}`, '_blank');
+
+                    alert("✅ تم حفظ الطلب وإرساله للمسؤول بنجاح");
+                    if (!editingId) location.reload(); // إعادة تشغيل لطلب جديد إذا لم يكن تعديلاً
+
+                } catch (e) {
+                    console.error(e);
+                    alert("❌ حدث خطأ أثناء الحفظ");
+                }
+            }
+
+            // 2. إرسال للعميل مباشرة
+            function sendToCustomer() {
+                let customerPhone = document.getElementById('c-phone1').value.trim();
+                if (!customerPhone) return alert("⚠️ لا يوجد رقم هاتف للعميل");
+
+                // تحويل الصيغة المصرية 010 إلى 2010
+                if (customerPhone.startsWith('0')) customerPhone = '2' + customerPhone;
+
+                const msg = buildInvoiceMessage();
+                window.open(`https://wa.me/${customerPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+            }
+
+            // 6. Packaging Real-time
+            // مصفوفة مؤقتة لتخزين الطلبات المحملة لتسهيل الطباعة
+            let loadedOrders = [];
+
+            // 1. مستمع الطلبات اللحظي
+            function startPackagingListener() {
+                const container = document.getElementById('p-orders-container');
+                if (!container) return; // تأمين الكود
+
+                db.collection('orders').orderBy('timestamp', 'desc').onSnapshot((snapshot) => {
+                    let html = "";
+                    loadedOrders = [];
+
+                    if (snapshot.empty) {
+                        container.innerHTML = `<div class="text-center p-5 w-100"><h5>لا توجد طلبات حالياً</h5></div>`;
+                        return;
+                    }
+
+                    snapshot.forEach((doc) => {
+                        const o = doc.data();
+                        const id = doc.id;
+                        loadedOrders.push({ id, ...o });
+
+                        const isSent = o.status === 'sent';
+
+                        html += `
+                <div class="col-md-6 mb-3">
+                    <div class="glass-card border ${isSent ? 'border-success opacity-75' : 'border-info'}">
+                        <div class="d-flex justify-content-between">
+                            <h5 class="text-warning">${o.customer || 'عميل مجهول'}</h5>
+                            <span class="badge ${isSent ? 'bg-success' : 'bg-info'}">${isSent ? 'تم الإرسال' : 'قيد التجهيز'}</span>
+                        </div>
+                        <p class="small mb-1"><i class="fas fa-phone"></i> ${o.phone || 'لا يوجد رقم'}</p>
+                        <p class="small"><i class="fas fa-map-marker-alt"></i> ${o.city} - ${o.addr}</p>
+                        <hr class="my-1 border-secondary">
+                        <ul class="list-unstyled small">
+                            ${(o.items || []).map(item => `
+                                <li><input type="checkbox" class="form-check-input me-1"> ${item.qty} × ${item.name} <small class="text-info">(${item.weight || ''})</small></li>
+                            `).join('')}
+                        </ul>
+                        <div class="mt-3 d-flex gap-2">
+                            ${!isSent ? `<button onclick="markAsShipped('${id}')" class="btn btn-success btn-sm flex-grow-1">تم الإرسال</button>` : ''}
+                            <button onclick="printOrderInvoice('${id}')" class="btn btn-warning btn-sm">
+                                <i class="fas fa-print"></i> طباعة البيان
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+                    });
+                    container.innerHTML = html;
+                });
+            }
+
+            // 2. دالة الطباعة (المصلحة تماماً)
+            function printOrderInvoice(orderId) {
+                const order = loadedOrders.find(o => o.id === orderId);
+                if (!order) return alert("عفواً، تعذر العثور على بيانات هذا الطلب.");
+
+                // جلب منطقة الطباعة أو إنشاؤها فوراً إذا لم تكن موجودة لمنع الـ Null Error
+                let printArea = document.getElementById('print-area');
+                if (!printArea) {
+                    printArea = document.createElement('div');
+                    printArea.id = 'print-area';
+                    document.body.appendChild(printArea);
+                }
+
+                let itemsHtml = (order.items || []).map(i => `
+        <tr>
+            <td style="border:1px solid black; padding:8px;">${i.name}</td>
+            <td style="border:1px solid black; padding:8px;">${i.qty}</td>
+            <td style="border:1px solid black; padding:8px;">${i.weight || '-'}</td>
+        </tr>
+    `).join('');
+
+                // بناء محتوى البيان
+                printArea.innerHTML = `
+        <div style="direction:rtl; font-family:Arial; padding:20px; color:black;">
+            <div style="text-align:center; border-bottom:2px solid black; padding-bottom:10px;">
+                <h1 style="margin:0;">بيان تجهيز طلبية</h1>
+                <p style="margin:5px 0;">الحصاد الذكي للمنتجات الزراعية</p>
+            </div>
+            <div style="margin:20px 0; font-size:18px;">
+                <p><strong>👤 العميل:</strong> ${order.customer}</p>
+                <p><strong>📱 الهاتف:</strong> ${order.phone}</p>
+                <p><strong>📍 العنوان:</strong> ${order.city} - ${order.addr}</p>
+            </div>
+            <table style="width:100%; border-collapse:collapse; text-align:center; font-size:16px;">
+                <thead>
+                    <tr style="background:#ddd;">
+                        <th style="border:1px solid black; padding:8px;">المنتج</th>
+                        <th style="border:1px solid black; padding:8px;">العدد</th>
+                        <th style="border:1px solid black; padding:8px;">الوزن</th>
+                    </tr>
+                </thead>
+                <tbody>${itemsHtml}</tbody>
+            </table>
+            <div style="margin-top:20px; padding:15px; border:2px solid black; display:inline-block; font-size:20px;">
+                <strong>💰 التحصيل المطلوب: ${order.remaining || order.total} ج.م</strong>
+            </div>
+            <p style="margin-top:40px; text-align:center; font-size:12px;">تاريخ الطلب: ${order.timestamp ? new Date(order.timestamp.seconds * 1000).toLocaleString('ar-EG') : 'غير مسجل'}</p>
+        </div>
+    `;
+
+                // تنفيذ الطباعة
+                window.print();
+            }
+
+            // 3. دالة تأكيد الشحن
+            async function markAsShipped(id) {
+                if (confirm("تأكيد إرسال الطلب؟")) {
+                    await db.collection('orders').doc(id).update({ status: 'sent' });
+                }
+            }
+            async function enterSellerMode() {
+                const sellerName = document.getElementById('seller-select-box').value;
+                const inputPass = document.getElementById('seller-pass-input').value;
+
+                if (!inputPass) return alert("يرجى كتابة كلمة السر");
+
+                // جلب بيانات البائع من Firebase
+                const snap = await db.collection('sellers').where('name', '==', sellerName).get();
+                const sellerDoc = snap.docs[0];
+                const sellerData = sellerDoc.data();
+
+                if (!sellerData.password) {
+                    // أول مرة: حفظ الباسورد
+                    await db.collection('sellers').doc(sellerDoc.id).update({ password: inputPass });
+                    alert("تم تعيين كلمة السر الخاصة بك بنجاح");
+                } else {
+                    // المرات التالية: التحقق
+                    if (sellerData.password !== inputPass) {
+                        return alert("كلمة السر خاطئة!");
+                    }
+                }
+
+                document.getElementById('active-s-name').innerText = sellerName;
+                showPage('home-page');
+            }
+            async function searchOrders() {
+                const term = document.getElementById('order-search-input').value;
+                if (!term) return alert("اكتب رقم الهاتف أو الفاتورة");
+
+                // البحث بالهاتف أو المعرف ID
+                let snap = await db.collection('orders').where('phone', '==', term).get();
+
+                if (snap.empty) {
+                    // محاولة البحث بـ ID المستند
+                    try {
+                        const doc = await db.collection('orders').doc(term).get();
+                        if (doc.exists) {
+                            fillOrderForEdit(doc.id, doc.data());
+                            return;
+                        }
+                    } catch (e) { }
+                    alert("لم يتم العثور على الأوردر");
+                } else {
+                    fillOrderForEdit(snap.docs[0].id, snap.docs[0].data());
+                }
+            }
+
+            function fillOrderForEdit(id, data) {
+                editingId = id; // تخزين معرف الفاتورة للتعديل
+
+                // 1. ملء بيانات العميل
+                document.getElementById('c-name').value = data.customer;
+                document.getElementById('c-phone1').value = data.phone;
+                document.getElementById('c-gov').value = data.city;
+                document.getElementById('c-addr').value = data.addr;
+                document.getElementById('c-paid').value = data.paid || 0;
+
+                // 2. تصفير جميع المدخلات الحالية في صفحة الطلبات أولاً
+                document.querySelectorAll('.s-qty').forEach(input => input.value = "");
+
+                // 3. ملء الكميات بناءً على المنتجات في الفاتورة القديمة
+                data.items.forEach(item => {
+                    // البحث عن حقل المنتج بناءً على الاسم
+                    const qtyInput = Array.from(document.querySelectorAll('.s-qty')).find(input => {
+                        const p = allProducts.find(prod => prod.id === input.dataset.id);
+                        return p && p.name === item.name;
+                    });
+                    if (qtyInput) qtyInput.value = item.qty;
+                });
+
+                // 4. تحديث الحسابات (الإجمالي والمتبقي)
+                reCalc();
+
+                // 5. التوجه لصفحة "الفاتورة" (customer-form) مباشرة
+                showPage('customer-form');
+                alert("✅ تم تحميل بيانات فاتورة العميل: " + data.customer);
+            }
+
+            // 7. General Helpers
+            function renderHome() { document.getElementById('products-grid').innerHTML = allProducts.map(p => `<div class="col-6 col-md-4 mb-3"><div class="glass-card product-card text-center" onclick="showDetails('${p.id}')">${!p.available ? '<div class="out-of-stock-badge">نفذ</div>' : ''}<img src="${p.images[0] || 'https://via.placeholder.com/150'}" class="product-img mb-2" style="${!p.available ? 'filter:grayscale(1)' : ''}"><h6>${p.name}</h6><p class="text-warning fw-bold">${p.price} ج.م</p></div></div>`).join(''); }
+            function filterHome() { const term = document.getElementById('home-search').value.toLowerCase(); document.querySelectorAll('.product-card').forEach(c => c.parentElement.style.display = c.innerText.toLowerCase().includes(term) ? "block" : "none"); }
+            function filterSellerProds() { const term = document.getElementById('seller-search').value.toLowerCase(); document.querySelectorAll('.seller-prod-item').forEach(c => c.style.display = c.dataset.name.toLowerCase().includes(term) ? "block" : "none"); }
+            function filterAdminTable() { const term = document.getElementById('admin-search').value.toLowerCase(); document.querySelectorAll('#admin-p-table tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(term) ? "table-row" : "none"); }
+
+            function showDetails(id) {
+                const p = allProducts.find(x => x.id === id);
+                document.getElementById('det-title').innerText = p.name;
+                document.getElementById('det-weight').innerText = p.weight || "-";
+                document.getElementById('det-price').innerText = p.price + " ج.م";
+                document.getElementById('det-stock').innerText = p.stock;
+                document.getElementById('det-desc').innerText = p.desc || 'لا يوجد وصف حالياً';
+                document.getElementById('main-detail-img').src = p.images[0] || 'https://via.placeholder.com/400';
+                document.getElementById('img-thumbs').innerHTML = (p.images || []).map(img => `<img src="${img}" style="width:60px;height:60px;cursor:pointer;border-radius:10px;object-fit:cover" onclick="document.getElementById('main-detail-img').src='${img}'">`).join('');
+                document.getElementById('det-status').innerText = p.available ? "متوفر" : "غير متوفر"; document.getElementById('det-status').className = p.available ? "badge bg-success" : "badge bg-danger";
+                document.getElementById('order-btn-container').innerHTML = p.available ? `<button class="btn btn-primary btn-lg w-100 mt-3" onclick="showPage('seller-order')">طلب المنتج الآن</button>` : '';
+
+                // Similar products logic
+                const sim = allProducts.filter(x => x.mainCat === p.mainCat && x.id !== p.id).slice(0, 3);
+                document.getElementById('similar-prods').innerHTML = sim.map(s => `<div class="col-4 text-center" onclick="showDetails('${s.id}')" style="cursor:pointer"><img src="${s.images[0]}" style="width:100%;height:80px;object-fit:cover" class="rounded"><small class="d-block text-truncate">${s.name}</small></div>`).join('');
+                showPage('details-page');
+            }
+            // دالة طباعة بيان التغليف
+            async function printOrderInvoice(orderId) {
+                try {
+                    const doc = await db.collection('orders').doc(orderId).get();
+                    if (!doc.exists) return alert("الأوردر غير موجود");
+
+                    const order = doc.data();
+                    const printDiv = document.getElementById('print-section');
+
+                    // بناء جدول المنتجات للطباعة
+                    let itemsRows = order.items.map(i => `
+            <tr>
+                <td style="padding: 10px; border: 1px solid #000;">${i.name}</td>
+                <td style="padding: 10px; border: 1px solid #000;">${i.qty}</td>
+                <td style="padding: 10px; border: 1px solid #000;">${i.weight || '-'}</td>
+            </tr>
+        `).join('');
+
+                    // تنسيق صفحة الطباعة
+                    printDiv.innerHTML = `
+            <div style="direction: rtl; font-family: 'Cairo', sans-serif; padding: 30px; color: #000; background: #fff;">
+                <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; mb-4">
+                    <h2>بيان تجهيز طلبية</h2>
+                    <p>الحصاد الذكي للمنتجات الزراعية</p>
+                </div>
+                
+                <div style="margin-top: 20px; line-height: 1.8;">
+                    <p><strong>👤 اسم العميل:</strong> ${order.customer}</p>
+                    <p><strong>📱 الهاتف:</strong> ${order.phone}</p>
+                    <p><strong>📍 العنوان:</strong> ${order.city} - ${order.addr}</p>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center;">
+                    <thead style="background: #eee;">
+                        <tr>
+                            <th style="padding: 10px; border: 1px solid #000;">المنتج</th>
+                            <th style="padding: 10px; border: 1px solid #000;">العدد</th>
+                            <th style="padding: 10px; border: 1px solid #000;">الوزن</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsRows}
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 30px; padding: 15px; border: 1px dashed #000; text-align: left;">
+                    <h3 style="margin: 0;">💰 المطلوب تحصيله: <span style="font-size: 24px;">${order.remaining || order.total} ج.م</span></h3>
+                </div>
+
+                <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #666;">
+                    تاريخ الطباعة: ${new Date().toLocaleString('ar-EG')} | بواسطة البائع: ${order.seller}
+                </div>
+            </div>
+        `;
+
+                    // إظهار المحتوى للطباعة فقط ثم إخفاؤه
+                    const originalContent = document.body.innerHTML;
+                    const printContent = printDiv.innerHTML;
+
+                    document.body.innerHTML = printContent;
+                    window.print();
+
+                    // العودة للتطبيق بعد الطباعة
+                    location.reload();
+
+                } catch (error) {
+                    console.error("Print error:", error);
+                    alert("فشلت عملية الطباعة");
+                }
+            }
+
+            function renderAdminTable() {
+                const alertList = document.getElementById('low-stock-list');
+                const alertBox = document.getElementById('stock-alerts');
+                let lowItems = [];
+                document.getElementById('admin-p-table').innerHTML = allProducts.map(p => {
+                    if (p.stock <= 5) lowItems.push(p.name);
+                    return `<tr><td>${p.name}</td><td>${p.stock}</td><td>${p.price}</td><td><button class="btn btn-sm btn-warning" onclick="editP('${p.id}')">تعديل</button> <button class="btn btn-sm btn-danger" onclick="delP('${p.id}')">حذف</button></td></tr>`;
                 }).join('');
-                document.getElementById('pending-count').innerText = snap.size;
-            });
-        }
+                if (lowItems.length > 0) { alertBox.classList.remove('hidden'); alertList.innerHTML = lowItems.join(' - '); } else { alertBox.classList.add('hidden'); }
+            }
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('sw.js')
+                        .then(reg => console.log('✅ تم تسجيل الخدمة بنجاح، التطبيق جاهز للتثبيت!'))
+                        .catch(err => console.log('❌ فشل تسجيل الخدمة:', err));
+                });
+            }
 
-        // 7. General Helpers
-        function renderHome() { document.getElementById('products-grid').innerHTML = allProducts.map(p => `<div class="col-6 col-md-4 mb-3"><div class="glass-card product-card text-center" onclick="showDetails('${p.id}')">${!p.available ? '<div class="out-of-stock-badge">نفذ</div>' : ''}<img src="${p.images[0] || 'https://via.placeholder.com/150'}" class="product-img mb-2" style="${!p.available ? 'filter:grayscale(1)' : ''}"><h6>${p.name}</h6><p class="text-warning fw-bold">${p.price} ج.م</p></div></div>`).join(''); }
-        function filterHome() { const term = document.getElementById('home-search').value.toLowerCase(); document.querySelectorAll('.product-card').forEach(c => c.parentElement.style.display = c.innerText.toLowerCase().includes(term) ? "block" : "none"); }
-        function filterSellerProds() { const term = document.getElementById('seller-search').value.toLowerCase(); document.querySelectorAll('.seller-prod-item').forEach(c => c.style.display = c.dataset.name.toLowerCase().includes(term) ? "block" : "none"); }
-        function filterAdminTable() { const term = document.getElementById('admin-search').value.toLowerCase(); document.querySelectorAll('#admin-p-table tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(term) ? "table-row" : "none"); }
+            function addSliderField(u = "") { document.getElementById('sl-inputs-container').insertAdjacentHTML('beforeend', `<div class="input-group mb-2"><input type="text" class="form-control input-glass sl-url" value="${u}"><button class="btn btn-danger" onclick="this.parentElement.remove()">X</button></div>`); }
+            async function saveSliderData() { await db.collection('settings').doc('slider').set({ urls: Array.from(document.querySelectorAll('.sl-url')).map(i => i.value).filter(v => v) }); alert("تم تحديث السلايدر"); await loadData(); }
+            async function saveSettings() { await db.collection('settings').doc('general').set({ bill: document.getElementById('wa-bill').value, supp: document.getElementById('wa-supp').value }); alert("تم الحفظ"); await loadData(); }
+            function showCustForm() { reCalc(); showPage('customer-form'); }
+            function addImgField() { document.getElementById('img-inputs').insertAdjacentHTML('beforeend', '<input type="text" placeholder="رابط صورة" class="form-control input-glass mb-2 p-img">'); }
 
-        function showDetails(id) {
-            const p = allProducts.find(x => x.id === id);
-            document.getElementById('det-title').innerText = p.name;
-            document.getElementById('det-weight').innerText = p.weight || "-";
-            document.getElementById('det-price').innerText = p.price + " ج.م";
-            document.getElementById('det-stock').innerText = p.stock;
-            document.getElementById('det-desc').innerText = p.desc || 'لا يوجد وصف حالياً';
-            document.getElementById('main-detail-img').src = p.images[0] || 'https://via.placeholder.com/400';
-            document.getElementById('img-thumbs').innerHTML = (p.images || []).map(img => `<img src="${img}" style="width:60px;height:60px;cursor:pointer;border-radius:10px;object-fit:cover" onclick="document.getElementById('main-detail-img').src='${img}'">`).join('');
-            document.getElementById('det-status').innerText = p.available ? "متوفر" : "غير متوفر"; document.getElementById('det-status').className = p.available ? "badge bg-success" : "badge bg-danger";
-            document.getElementById('order-btn-container').innerHTML = p.available ? `<button class="btn btn-primary btn-lg w-100 mt-3" onclick="showPage('seller-order')">طلب المنتج الآن</button>` : '';
-
-            // Similar products logic
-            const sim = allProducts.filter(x => x.mainCat === p.mainCat && x.id !== p.id).slice(0, 3);
-            document.getElementById('similar-prods').innerHTML = sim.map(s => `<div class="col-4 text-center" onclick="showDetails('${s.id}')" style="cursor:pointer"><img src="${s.images[0]}" style="width:100%;height:80px;object-fit:cover" class="rounded"><small class="d-block text-truncate">${s.name}</small></div>`).join('');
-            showPage('details-page');
-        }
-
-        function renderAdminTable() {
-            const alertList = document.getElementById('low-stock-list');
-            const alertBox = document.getElementById('stock-alerts');
-            let lowItems = [];
-            document.getElementById('admin-p-table').innerHTML = allProducts.map(p => {
-                if (p.stock <= 5) lowItems.push(p.name);
-                return `<tr><td>${p.name}</td><td>${p.stock}</td><td>${p.price}</td><td><button class="btn btn-sm btn-warning" onclick="editP('${p.id}')">تعديل</button> <button class="btn btn-sm btn-danger" onclick="delP('${p.id}')">حذف</button></td></tr>`;
-            }).join('');
-            if (lowItems.length > 0) { alertBox.classList.remove('hidden'); alertList.innerHTML = lowItems.join(' - '); } else { alertBox.classList.add('hidden'); }
-        }
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('✅ تم تسجيل الخدمة بنجاح، التطبيق جاهز للتثبيت!'))
-                    .catch(err => console.log('❌ فشل تسجيل الخدمة:', err));
-            });
-        }
-
-        function addSliderField(u = "") { document.getElementById('sl-inputs-container').insertAdjacentHTML('beforeend', `<div class="input-group mb-2"><input type="text" class="form-control input-glass sl-url" value="${u}"><button class="btn btn-danger" onclick="this.parentElement.remove()">X</button></div>`); }
-        async function saveSliderData() { await db.collection('settings').doc('slider').set({ urls: Array.from(document.querySelectorAll('.sl-url')).map(i => i.value).filter(v => v) }); alert("تم تحديث السلايدر"); await loadData(); }
-        async function saveSettings() { await db.collection('settings').doc('general').set({ bill: document.getElementById('wa-bill').value, supp: document.getElementById('wa-supp').value }); alert("تم الحفظ"); await loadData(); }
-        function showCustForm() { reCalc(); showPage('customer-form'); }
-        function addImgField() { document.getElementById('img-inputs').insertAdjacentHTML('beforeend', '<input type="text" placeholder="رابط صورة" class="form-control input-glass mb-2 p-img">'); }
-
-    </script>
+        </script>
 </body>
 
 </html>
